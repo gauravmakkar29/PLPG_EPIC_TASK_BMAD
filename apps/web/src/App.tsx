@@ -7,28 +7,39 @@
 
 import { Routes, Route } from 'react-router-dom';
 
+import { AuthProvider } from './contexts/AuthContext';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
+
+import type { JSX } from 'react';
 
 /**
  * Main application component.
  * Defines the route structure for the application.
+ * Wraps all routes with AuthProvider to provide authentication context.
+ *
+ * @returns {JSX.Element} Application component with routes
  */
-export function App() {
+export function App(): JSX.Element {
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      {/* Auth routes - to be implemented in Epic 1 */}
-      <Route path="/signin" element={<div>Sign In - Coming Soon</div>} />
-      <Route path="/signup" element={<div>Sign Up - Coming Soon</div>} />
-      {/* Onboarding routes - to be implemented in Epic 2 */}
-      <Route path="/onboarding" element={<div>Onboarding - Coming Soon</div>} />
-      {/* Dashboard routes - to be implemented in Epic 4 */}
-      <Route path="/dashboard" element={<div>Dashboard - Coming Soon</div>} />
-      {/* Settings routes - to be implemented in Epic 5 */}
-      <Route path="/settings" element={<div>Settings - Coming Soon</div>} />
-      {/* 404 fallback */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <AuthProvider>
+      <Routes>
+        <Route element={<Landing />} path="/" />
+        {/* Auth routes - to be implemented in Epic 1 */}
+        <Route element={<div>Sign In - Coming Soon</div>} path="/signin" />
+        <Route element={<div>Sign Up - Coming Soon</div>} path="/signup" />
+        {/* Onboarding routes - to be implemented in Epic 2 */}
+        <Route
+          element={<div>Onboarding - Coming Soon</div>}
+          path="/onboarding"
+        />
+        {/* Dashboard routes - to be implemented in Epic 4 */}
+        <Route element={<div>Dashboard - Coming Soon</div>} path="/dashboard" />
+        {/* Settings routes - to be implemented in Epic 5 */}
+        <Route element={<div>Settings - Coming Soon</div>} path="/settings" />
+        {/* 404 fallback */}
+        <Route element={<NotFound />} path="*" />
+      </Routes>
+    </AuthProvider>
   );
 }

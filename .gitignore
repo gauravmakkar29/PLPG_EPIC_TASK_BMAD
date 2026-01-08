@@ -46,3 +46,12 @@ temp/
 .cache/
 .eslintcache
 .prettiercache
+
+# bmad-core
+.bmad-core/
+
+# cursor-core
+.cursor/
+.github/
+
+
