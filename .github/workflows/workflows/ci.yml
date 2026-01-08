@@ -1,0 +1,325 @@
+# =============================================================================
+# CI/CD Pipeline - Personalized Learning Path Generator (PLPG)
+# =============================================================================
+#
+# Description:
+#   Continuous Integration workflow that enforces code quality standards on
+#   every pull request and push to the main branch. This pipeline ensures
+#   consistent code quality through automated linting, type checking, testing,
+#   and build verification.
+#
+# Workflow Architecture:
+#   +---------+    +-----------+    +------+
+#   |  Lint   |    | Typecheck |    | Test |
+#   +---------+    +-----------+    +------+
+#        |              |              |
+#        +--------------+--------------+
+#                       |
+#                       v
+#                  +---------+
+#                  |  Build  |
+#                  +---------+
+#
+# Jobs execute in parallel where possible, with the build job depending on
+# successful completion of all quality gates.
+#
+# Author: PLPG Development Team
+# Created: 2026-01-08
+# =============================================================================
+
+name: CI
+
+# =============================================================================
+# Trigger Configuration
+# =============================================================================
+# Workflow triggers on:
+#   - Push events to the main branch
+#   - Pull requests targeting the main branch
+# =============================================================================
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# =============================================================================
+# Concurrency Control
+# =============================================================================
+# Prevents multiple workflow runs for the same branch/PR from running
+# simultaneously. When a new run is triggered, any in-progress runs for
+# the same ref are automatically cancelled to conserve resources.
+# =============================================================================
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# =============================================================================
+# Environment Variables
+# =============================================================================
+# Global environment variables available to all jobs
+# =============================================================================
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+  WORKING_DIRECTORY: './plpg'
+
+jobs:
+  # ===========================================================================
+  # Lint Job
+  # ===========================================================================
+  # Purpose:
+  #   Enforces code style and quality rules using ESLint across the monorepo.
+  #   Catches potential bugs, enforces consistent code style, and ensures
+  #   adherence to project coding standards.
+  #
+  # Exit Codes:
+  #   0 - All lint rules pass
+  #   1 - Lint errors detected (blocks merge)
+  # ===========================================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    steps:
+      # -----------------------------------------------------------------------
+      # Step 1: Checkout Repository
+      # Fetches the repository code for the current PR/push event
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # Step 2: Setup pnpm Package Manager
+      # Installs pnpm at the specified version for dependency management
+      # -----------------------------------------------------------------------
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      # -----------------------------------------------------------------------
+      # Step 3: Setup Node.js Environment
+      # Configures Node.js runtime with pnpm cache for faster installations
+      # -----------------------------------------------------------------------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pnpm-lock.yaml'
+
+      # -----------------------------------------------------------------------
+      # Step 4: Install Dependencies
+      # Uses frozen lockfile to ensure reproducible builds
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # -----------------------------------------------------------------------
+      # Step 5: Run ESLint
+      # Executes linting across all packages in the monorepo via Turborepo
+      # -----------------------------------------------------------------------
+      - name: Run lint
+        run: pnpm lint
+
+  # ===========================================================================
+  # Type Check Job
+  # ===========================================================================
+  # Purpose:
+  #   Validates TypeScript types across the entire monorepo. Ensures type
+  #   safety and catches type-related errors before they reach production.
+  #
+  # Exit Codes:
+  #   0 - All type checks pass
+  #   1 - Type errors detected (blocks merge)
+  # ===========================================================================
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pnpm-lock.yaml'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # -----------------------------------------------------------------------
+      # Step 5: Run TypeScript Type Checking
+      # Executes tsc --noEmit across all packages via Turborepo
+      # -----------------------------------------------------------------------
+      - name: Run typecheck
+        run: pnpm typecheck
+
+  # ===========================================================================
+  # Test Job
+  # ===========================================================================
+  # Purpose:
+  #   Executes the complete test suite across all packages in the monorepo.
+  #   Generates code coverage reports and uploads them to Codecov for
+  #   tracking coverage trends over time.
+  #
+  # Coverage Reports:
+  #   - Uploaded to Codecov for visibility and PR comments
+  #   - Coverage data helps identify untested code paths
+  #
+  # Exit Codes:
+  #   0 - All tests pass
+  #   1 - Test failures detected (blocks merge)
+  # ===========================================================================
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pnpm-lock.yaml'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # -----------------------------------------------------------------------
+      # Step 5: Run Test Suite
+      # Executes all tests via Turborepo with coverage collection
+      # -----------------------------------------------------------------------
+      - name: Run tests
+        run: pnpm test
+
+      # -----------------------------------------------------------------------
+      # Step 6: Upload Coverage to Codecov
+      # Uploads coverage reports for visibility in PRs and tracking over time
+      # Uses 'if: always()' to ensure coverage is uploaded even if tests fail
+      # -----------------------------------------------------------------------
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          directory: ${{ env.WORKING_DIRECTORY }}
+          fail_ci_if_error: false
+          verbose: true
+
+  # ===========================================================================
+  # Build Job
+  # ===========================================================================
+  # Purpose:
+  #   Verifies that the entire monorepo can be successfully built. This job
+  #   runs only after lint, typecheck, and test jobs pass successfully,
+  #   ensuring that only quality-verified code is built.
+  #
+  # Dependencies:
+  #   - lint: Code style and quality rules must pass
+  #   - typecheck: TypeScript types must be valid
+  #   - test: All tests must pass
+  #
+  # Artifacts:
+  #   - Verifies build artifacts are created for all packages
+  #   - Does not persist artifacts (deployment handled separately)
+  #
+  # Exit Codes:
+  #   0 - Build succeeds
+  #   1 - Build fails (blocks merge)
+  # ===========================================================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test]
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIRECTORY }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+          cache-dependency-path: '${{ env.WORKING_DIRECTORY }}/pnpm-lock.yaml'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # -----------------------------------------------------------------------
+      # Step 5: Build All Packages
+      # Executes the build command via Turborepo, building all packages
+      # in the correct dependency order
+      # -----------------------------------------------------------------------
+      - name: Build all packages
+        run: pnpm build
+
+      # -----------------------------------------------------------------------
+      # Step 6: Verify Build Artifacts
+      # Ensures that critical build outputs exist after compilation
+      # -----------------------------------------------------------------------
+      - name: Verify build artifacts
+        run: |
+          echo "Verifying build artifacts..."
+
+          # Check shared package build output
+          if [ -d "packages/shared/dist" ]; then
+            echo "packages/shared/dist exists"
+            ls -la packages/shared/dist
+          else
+            echo "ERROR: packages/shared/dist not found"
+            exit 1
+          fi
+
+          # Check API build output
+          if [ -d "apps/api/dist" ]; then
+            echo "apps/api/dist exists"
+            ls -la apps/api/dist
+          else
+            echo "ERROR: apps/api/dist not found"
+            exit 1
+          fi
+
+          # Check Web build output
+          if [ -d "apps/web/dist" ]; then
+            echo "apps/web/dist exists"
+            ls -la apps/web/dist
+          else
+            echo "ERROR: apps/web/dist not found"
+            exit 1
+          fi
+
+          echo "All build artifacts verified successfully"
