@@ -1,0 +1,179 @@
+# =============================================================================
+# Podman Compose Configuration - PLPG Development Environment
+# =============================================================================
+#
+# Description:
+#   This configuration defines the containerized local development environment
+#   for the Personal Learning Path Generator (PLPG) application. It provides
+#   PostgreSQL, Redis, and MailHog services for full-stack development.
+#
+# Usage:
+#   # Start all services in detached mode
+#   podman-compose -f podman/podman-compose.yml up -d
+#
+#   # View logs
+#   podman-compose -f podman/podman-compose.yml logs -f
+#
+#   # Stop all services
+#   podman-compose -f podman/podman-compose.yml down
+#
+#   # Stop and remove volumes (reset data)
+#   podman-compose -f podman/podman-compose.yml down -v
+#
+# Service URLs:
+#   - PostgreSQL: localhost:5432
+#   - Redis: localhost:6379
+#   - MailHog SMTP: localhost:1025
+#   - MailHog Web UI: http://localhost:8025
+#
+# Author: PLPG Development Team
+# Created: 2026-01-08
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # PostgreSQL Database
+  # ===========================================================================
+  # Purpose:
+  #   Primary database for storing user data, learning paths, progress,
+  #   and all application state. Uses PostgreSQL 15 Alpine for minimal
+  #   footprint with full feature support.
+  #
+  # Credentials (development only):
+  #   - User: plpg
+  #   - Password: plpg_dev_password
+  #   - Database: plpg_dev
+  #
+  # Connection String:
+  #   postgresql://plpg:plpg_dev_password@localhost:5432/plpg_dev
+  # ===========================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: plpg-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: plpg
+      POSTGRES_PASSWORD: plpg_dev_password
+      POSTGRES_DB: plpg_dev
+      # Performance tuning for development
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
+    volumes:
+      # Named volume for data persistence across container restarts
+      - plpg-postgres-data:/var/lib/postgresql/data
+      # Optional: Mount custom initialization scripts
+      # - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U plpg -d plpg_dev']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - plpg-network
+
+  # ===========================================================================
+  # Redis Cache
+  # ===========================================================================
+  # Purpose:
+  #   In-memory data store for caching, session management, and rate limiting.
+  #   Uses Redis 7 Alpine for optimal performance and minimal footprint.
+  #
+  # Features:
+  #   - Session storage
+  #   - Rate limiting counters
+  #   - Temporary data caching
+  #   - Job queue support (future)
+  #
+  # Connection String:
+  #   redis://localhost:6379
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: plpg-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      # Named volume for data persistence (AOF enabled)
+      - plpg-redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - plpg-network
+
+  # ===========================================================================
+  # MailHog - Email Testing Server
+  # ===========================================================================
+  # Purpose:
+  #   SMTP server that captures all outgoing emails for development testing.
+  #   Provides a web UI to view sent emails without actually delivering them.
+  #
+  # Use Cases:
+  #   - Email verification flows
+  #   - Password reset emails
+  #   - Notification testing
+  #   - Email template development
+  #
+  # Access:
+  #   - SMTP Server: localhost:1025
+  #   - Web UI: http://localhost:8025
+  # ===========================================================================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: plpg-mailhog
+    restart: unless-stopped
+    ports:
+      # SMTP server port (for sending emails)
+      - '1025:1025'
+      # Web UI port (for viewing emails)
+      - '8025:8025'
+    environment:
+      # Store emails in memory (default behavior)
+      MH_STORAGE: memory
+      # Maximum emails to store (prevent memory issues)
+      MH_MAILDIR_PATH: /maildir
+    healthcheck:
+      test: ['CMD', 'wget', '-q', '--spider', 'http://localhost:8025']
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - plpg-network
+
+# =============================================================================
+# Networks
+# =============================================================================
+# Purpose:
+#   Isolated network for PLPG services to communicate securely.
+#   All services are accessible from the host machine via mapped ports.
+# =============================================================================
+networks:
+  plpg-network:
+    driver: bridge
+    name: plpg-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+# Purpose:
+#   Named volumes for data persistence across container restarts.
+#   Data survives container recreation but can be removed with `down -v`.
+# =============================================================================
+volumes:
+  # PostgreSQL data directory
+  plpg-postgres-data:
+    name: plpg-postgres-data
+
+  # Redis persistence (AOF files)
+  plpg-redis-data:
+    name: plpg-redis-data

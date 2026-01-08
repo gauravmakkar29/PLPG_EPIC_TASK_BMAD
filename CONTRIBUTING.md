@@ -159,28 +159,122 @@ The project enforces consistent code style through ESLint:
 Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
 
 ```
-<type>(<scope>): <description>
+<type>(<scope>): <subject>
 
 [optional body]
 
 [optional footer(s)]
 ```
 
-**Types:**
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, etc.)
-- `refactor`: Code refactoring
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks
+#### Commit Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| `feat` | New feature or functionality | `feat(web): add user dashboard` |
+| `fix` | Bug fix | `fix(api): resolve auth token expiry` |
+| `docs` | Documentation changes | `docs(shared): update API docs` |
+| `style` | Code style changes (formatting) | `style(web): fix indentation` |
+| `refactor` | Code refactoring | `refactor(api): simplify auth flow` |
+| `perf` | Performance improvements | `perf(web): optimize bundle size` |
+| `test` | Adding or updating tests | `test(shared): add validation tests` |
+| `build` | Build system changes | `build(config): update webpack` |
+| `ci` | CI/CD changes | `ci: add coverage reporting` |
+| `chore` | Maintenance tasks | `chore(deps): upgrade vitest` |
+| `revert` | Reverting commits | `revert: feat(web): add dashboard` |
+
+#### Commit Scopes
+
+| Scope | Description |
+|-------|-------------|
+| `web` | Frontend web application |
+| `api` | Backend API service |
+| `shared` | Shared types, utilities, validation |
+| `config` | Shared configuration packages |
+| `ui` | UI component library |
+| `auth` | Authentication and authorization |
+| `roadmap` | Roadmap generation engine |
+| `onboarding` | User onboarding flow |
+| `dashboard` | Dashboard and progress tracking |
+| `infra` | Infrastructure and deployment |
+| `ci` | CI/CD pipelines |
+| `docker` | Docker/containerization |
+| `deps` | Dependency updates |
+| `release` | Release-related changes |
+
+#### Commit Message Examples
+
+```bash
+# Feature with scope
+feat(web): add user authentication flow
+
+# Bug fix with detailed body
+fix(api): resolve database connection timeout
+
+The connection pool was exhausting due to unclosed connections.
+Added proper cleanup in the finally block.
+
+Closes #123
+
+# Documentation update
+docs(shared): update API type definitions
+
+# Dependency update
+chore(deps): upgrade vitest to v3.2.3
+
+# Breaking change (use ! after type)
+feat(api)!: change auth response format
+
+BREAKING CHANGE: The auth endpoint now returns { token, user }
+instead of just the token string.
+```
 
 ### Pre-commit Hooks
 
-The project uses Husky and lint-staged to run:
-- ESLint on staged TypeScript files
-- Prettier formatting on all staged files
-- Commitlint for commit message validation
+The project uses **Husky** and **lint-staged** to enforce code quality before commits.
+
+#### What Runs on Pre-commit
+
+| File Type | Actions |
+|-----------|---------|
+| `*.ts, *.tsx` | ESLint (with auto-fix) + Prettier |
+| `*.js, *.jsx, *.cjs, *.mjs` | ESLint (with auto-fix) + Prettier |
+| `*.json, *.md, *.yaml, *.yml` | Prettier |
+| `*.css` | Prettier |
+
+#### What Runs on Commit Message
+
+- **Commitlint** validates the commit message format
+- Rejects commits that don't follow Conventional Commits
+- Provides helpful error messages on rejection
+
+#### Bypassing Hooks (Use Sparingly)
+
+```bash
+# Bypass pre-commit and commit-msg hooks
+git commit --no-verify -m "your message"
+
+# Or use the shorthand
+git commit -n -m "your message"
+```
+
+> **Warning:** Only bypass hooks in exceptional circumstances. All CI checks
+> will still run, and non-compliant code will be rejected.
+
+#### Troubleshooting Hooks
+
+```bash
+# If hooks aren't running after fresh clone
+npm install  # This runs 'prepare' script which sets up husky
+
+# Manually re-initialize husky
+npm run prepare
+
+# Test lint-staged manually
+npx lint-staged
+
+# Test commitlint manually
+echo "feat(web): test message" | npx commitlint
+```
 
 ---
 
@@ -190,38 +284,47 @@ The project uses Husky and lint-staged to run:
 
 ```bash
 # Run locally to see errors
-cd plpg
-pnpm lint
+npm run lint
 
-# Auto-fix issues
-pnpm lint --fix
+# Auto-fix issues (in specific workspace)
+npm run lint --workspace=@plpg/web -- --fix
 ```
 
 ### Type Errors
 
 ```bash
 # Run locally
-cd plpg
-pnpm typecheck
+npm run typecheck
 ```
 
 ### Test Failures
 
 ```bash
 # Run tests locally
-cd plpg
-pnpm test
+npm test
 
 # Run with coverage
-pnpm test:coverage
+npm run test:coverage
+
+# Run tests in watch mode
+npm run test:watch
 ```
 
 ### Build Failures
 
 ```bash
 # Run build locally
-cd plpg
-pnpm build
+npm run build
+```
+
+### Pre-commit Hook Failures
+
+```bash
+# Run lint-staged manually to see errors
+npx lint-staged --verbose
+
+# Check commitlint configuration
+npx commitlint --from HEAD~1 --to HEAD --verbose
 ```
 
 ---
