@@ -5,13 +5,37 @@
   "description": "PLPG Express Backend API (Express.js + TypeScript)",
   "type": "module",
   "scripts": {
-    "dev": "echo 'Backend scaffold will be configured in Story 0.6'",
-    "build": "echo 'Build script pending Story 0.6'",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
     "test": "echo 'Tests pending Story 0.9'",
     "lint": "eslint src --ext .ts --max-warnings 0",
     "lint:fix": "eslint src --ext .ts --fix",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write 'src/**/*.ts'",
+    "format:check": "prettier --check 'src/**/*.ts'"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@plpg/shared": "^0.1.0",
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "pino": "^10.1.0",
+    "pino-http": "^11.0.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@plpg/config": "^0.1.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^25.0.3",
+    "eslint": "^8.57.1",
+    "pino-pretty": "^13.1.3",
+    "prettier": "^3.7.4",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
 }

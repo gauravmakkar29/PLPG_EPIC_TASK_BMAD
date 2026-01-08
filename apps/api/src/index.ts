@@ -1,9 +1,12 @@
 /**
  * @fileoverview Main entry point for the PLPG API server.
- * This file will be fully implemented in Story 0.6.
+ * Re-exports server startup for programmatic usage.
  *
  * @module @plpg/api
  */
 
-// Placeholder - Full implementation in Story 0.6
-export {};
+// Start the server
+import './server';
+
+// Export app for testing
+export { createApp } from './app';

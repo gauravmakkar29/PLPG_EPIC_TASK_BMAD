@@ -1,0 +1,8 @@
+# Services directory
+# Business logic layer - contains service classes that orchestrate
+# operations between controllers and repositories.
+#
+# Examples:
+# - auth.service.ts
+# - roadmap.service.ts
+# - progress.service.ts

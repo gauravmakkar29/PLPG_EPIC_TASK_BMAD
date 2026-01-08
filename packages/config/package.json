@@ -51,5 +51,8 @@
     "prettier-config",
     "plpg"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "eslint-import-resolver-typescript": "^4.4.4"
+  }
 }

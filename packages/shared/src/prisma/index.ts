@@ -1,13 +1,14 @@
 /**
  * @fileoverview Prisma client export for PLPG.
- * Provides a singleton Prisma client instance for database access.
+ * Provides a lazy-loaded singleton Prisma client instance for database access.
  *
  * @module @plpg/shared/prisma
  * @description Centralized Prisma client for consistent database access.
  *
  * @example
- * import { prisma } from '@plpg/shared/prisma';
+ * import { getPrisma } from '@plpg/shared/prisma';
  *
+ * const prisma = getPrisma();
  * const users = await prisma.user.findMany();
  */
 
@@ -22,6 +23,8 @@ declare global {
   var __prisma: PrismaClient | undefined;
 }
 
+let prismaInstance: PrismaClient | undefined;
+
 /**
  * Creates a new Prisma client instance with logging configuration.
  *
@@ -31,7 +34,7 @@ declare global {
 function createPrismaClient(): PrismaClient {
   const client = new PrismaClient({
     log:
-      process.env.NODE_ENV === 'development'
+      process.env['NODE_ENV'] === 'development'
         ? ['query', 'error', 'warn']
         : ['error'],
   });
@@ -40,20 +43,42 @@ function createPrismaClient(): PrismaClient {
 }
 
 /**
+ * Get the Prisma client instance.
+ * Creates a new instance if one doesn't exist (lazy initialization).
+ *
+ * @function getPrisma
+ * @returns {PrismaClient} The Prisma client instance
+ */
+export function getPrisma(): PrismaClient {
+  if (!prismaInstance) {
+    prismaInstance = globalThis.__prisma ?? createPrismaClient();
+
+    // Store client in global variable for development
+    if (process.env['NODE_ENV'] !== 'production') {
+      globalThis.__prisma = prismaInstance;
+    }
+  }
+
+  return prismaInstance;
+}
+
+/**
  * Singleton Prisma client instance.
- * Uses global variable in development to prevent multiple instances
- * during hot module replacement.
+ * Uses getter to lazily initialize the client.
  *
  * @constant prisma
  * @description Use this for all database operations.
  */
-export const prisma: PrismaClient =
-  globalThis.__prisma ?? createPrismaClient();
-
-// Store client in global variable for development
-if (process.env.NODE_ENV !== 'production') {
-  globalThis.__prisma = prisma;
-}
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_, prop) {
+    const client = getPrisma();
+    const value = client[prop as keyof PrismaClient];
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
 
 /**
  * Gracefully disconnect Prisma client.
@@ -63,7 +88,10 @@ if (process.env.NODE_ENV !== 'production') {
  * @returns {Promise<void>}
  */
 export async function disconnectPrisma(): Promise<void> {
-  await prisma.$disconnect();
+  if (prismaInstance) {
+    await prismaInstance.$disconnect();
+    prismaInstance = undefined;
+  }
 }
 
 /**
@@ -74,7 +102,8 @@ export async function disconnectPrisma(): Promise<void> {
  * @returns {Promise<void>}
  */
 export async function connectPrisma(): Promise<void> {
-  await prisma.$connect();
+  const client = getPrisma();
+  await client.$connect();
 }
 
 // Re-export Prisma types for convenience
