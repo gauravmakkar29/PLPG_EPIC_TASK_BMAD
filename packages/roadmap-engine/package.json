@@ -1,0 +1,32 @@
+{
+  "name": "@plpg/roadmap-engine",
+  "version": "0.1.0",
+  "description": "DAG-based roadmap generation engine for PLPG (Epic 3)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "echo 'Roadmap engine dev mode pending Epic 3'",
+    "build": "echo 'Build script pending Epic 3'",
+    "test": "echo 'Tests pending Epic 3'",
+    "lint": "eslint src --ext .ts --max-warnings 0",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "peerDependencies": {
+    "@plpg/shared": "*"
+  }
+}

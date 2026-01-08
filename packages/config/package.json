@@ -1,0 +1,55 @@
+{
+  "name": "@plpg/config",
+  "version": "0.1.0",
+  "description": "Shared configuration for ESLint, TypeScript, Tailwind, and Prettier across PLPG monorepo",
+  "type": "commonjs",
+  "main": "index.js",
+  "exports": {
+    "./eslint/base": "./eslint/base.js",
+    "./eslint/react": "./eslint/react.js",
+    "./eslint/node": "./eslint/node.js",
+    "./typescript/base": "./typescript/base.json",
+    "./typescript/react": "./typescript/react.json",
+    "./typescript/node": "./typescript/node.json",
+    "./tailwind": "./tailwind/preset.js",
+    "./prettier": "./prettier/index.js"
+  },
+  "files": [
+    "eslint",
+    "typescript",
+    "tailwind",
+    "prettier",
+    "index.js"
+  ],
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "echo 'Config package uses JS - no typecheck needed'"
+  },
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-react": "^7.33.0",
+    "eslint-plugin-react-hooks": "^4.6.0"
+  },
+  "peerDependencies": {
+    "eslint": ">=8.0.0",
+    "prettier": ">=3.0.0",
+    "tailwindcss": ">=3.0.0",
+    "typescript": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "tailwindcss": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "eslint-config",
+    "typescript-config",
+    "tailwind-preset",
+    "prettier-config",
+    "plpg"
+  ],
+  "license": "MIT"
+}

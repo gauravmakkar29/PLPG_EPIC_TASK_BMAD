@@ -1,0 +1,38 @@
+{
+  "name": "plpg",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Personal Learning Path Generator - A monorepo for AI-powered career roadmap generation",
+  "author": "PLPG Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@10.2.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "prepare": "echo 'Husky hooks will be configured in Story 0.11'",
+    "preinstall": "node -e \"if(process.env.npm_execpath.indexOf('pnpm') !== -1) throw new Error('Use npm, not pnpm')\""
+  },
+  "devDependencies": {},
+  "keywords": [
+    "monorepo",
+    "learning-path",
+    "career-development",
+    "roadmap-generator"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/plpg/plpg.git"
+  }
+}

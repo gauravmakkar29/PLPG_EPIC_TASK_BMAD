@@ -1,0 +1,17 @@
+{
+  "name": "@plpg/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PLPG Express Backend API (Express.js + TypeScript)",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Backend scaffold will be configured in Story 0.6'",
+    "build": "echo 'Build script pending Story 0.6'",
+    "test": "echo 'Tests pending Story 0.9'",
+    "lint": "eslint src --ext .ts --max-warnings 0",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
