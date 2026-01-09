@@ -161,11 +161,11 @@ export const mockProUserWithSubscription = {
  */
 export function createMockRequest(overrides: Record<string, unknown> = {}) {
   return {
-    headers: {},
-    params: {},
-    query: {},
-    body: {},
-    user: undefined,
+    headers: {} as Record<string, string>,
+    params: {} as Record<string, string>,
+    query: {} as Record<string, string>,
+    body: {} as Record<string, unknown>,
+    user: undefined as unknown,
     ...overrides,
   };
 }

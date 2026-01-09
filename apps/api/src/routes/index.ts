@@ -7,14 +7,17 @@
 
 import { Router } from 'express';
 import { healthRoutes } from './health.routes';
+import { authRoutes } from './auth.routes';
 
 const router = Router();
 
 // Health check routes
 router.use('/health', healthRoutes);
 
+// Authentication routes
+router.use('/auth', authRoutes);
+
 // Future route modules will be added here:
-// router.use('/auth', authRoutes);
 // router.use('/onboarding', onboardingRoutes);
 // router.use('/roadmap', roadmapRoutes);
 // router.use('/progress', progressRoutes);
