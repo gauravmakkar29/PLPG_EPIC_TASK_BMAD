@@ -101,7 +101,7 @@ describe('jwt utility', () => {
 
       expect(decoded.iat).toBeDefined();
       expect(decoded.exp).toBeDefined();
-      expect(decoded.exp).toBeGreaterThan(decoded.iat);
+      expect(decoded.exp).toBeGreaterThan(decoded.iat as number);
     });
   });
 
@@ -179,8 +179,12 @@ describe('jwt utility', () => {
         { expiresIn: '-1s', issuer: 'plpg-api', audience: 'plpg-client' }
       );
 
-      expect(() => verifyAccessToken(expiredToken)).toThrow(AuthenticationError);
-      expect(() => verifyAccessToken(expiredToken)).toThrow('Token has expired');
+      expect(() => verifyAccessToken(expiredToken)).toThrow(
+        AuthenticationError
+      );
+      expect(() => verifyAccessToken(expiredToken)).toThrow(
+        'Token has expired'
+      );
     });
 
     it('should throw for token signed with wrong secret', () => {
@@ -223,7 +227,9 @@ describe('jwt utility', () => {
         { expiresIn: '-1s', issuer: 'plpg-api', audience: 'plpg-client' }
       );
 
-      expect(() => verifyRefreshToken(expiredToken)).toThrow(AuthenticationError);
+      expect(() => verifyRefreshToken(expiredToken)).toThrow(
+        AuthenticationError
+      );
       expect(() => verifyRefreshToken(expiredToken)).toThrow(
         'Refresh token has expired'
       );

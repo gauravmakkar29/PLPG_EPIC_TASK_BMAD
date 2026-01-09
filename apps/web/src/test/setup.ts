@@ -9,6 +9,7 @@
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeAll, afterAll } from 'vitest';
+
 import { server } from './mocks/server';
 
 /**
@@ -56,9 +57,9 @@ Object.defineProperty(window, 'matchMedia', {
  * Mock ResizeObserver for components that observe element sizes.
  */
 class ResizeObserverMock {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
 }
 
 window.ResizeObserver = ResizeObserverMock;
@@ -70,9 +71,9 @@ class IntersectionObserverMock {
   readonly root: Element | null = null;
   readonly rootMargin: string = '';
   readonly thresholds: ReadonlyArray<number> = [];
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
   takeRecords(): IntersectionObserverEntry[] {
     return [];
   }

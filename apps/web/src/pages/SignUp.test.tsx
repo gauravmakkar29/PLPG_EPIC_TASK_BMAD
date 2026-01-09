@@ -5,20 +5,17 @@
  * @module @plpg/web/pages/SignUp.test
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-import { SignUp } from './SignUp';
 import { AuthProvider } from '../contexts/AuthContext';
 import { server } from '../test/mocks/server';
+
+import { SignUp } from './SignUp';
 
 /**
  * API base URL matching the api.ts configuration.
@@ -71,7 +68,7 @@ function createTestQueryClient(): QueryClient {
  * @param {string[]} [initialEntries] - Initial router entries
  * @returns Render result
  */
-function renderSignUp(initialEntries = ['/signup']) {
+function renderSignUp(initialEntries = ['/signup']): ReturnType<typeof render> {
   const queryClient = createTestQueryClient();
 
   return render(
@@ -79,12 +76,12 @@ function renderSignUp(initialEntries = ['/signup']) {
       <MemoryRouter initialEntries={initialEntries}>
         <AuthProvider>
           <Routes>
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/sign-up" element={<SignUp />} />
-            <Route path="/signin" element={<div>Sign In Page</div>} />
-            <Route path="/onboarding" element={<div>Onboarding Page</div>} />
-            <Route path="/dashboard" element={<div>Dashboard Page</div>} />
-            <Route path="/" element={<div>Home Page</div>} />
+            <Route element={<SignUp />} path="/signup" />
+            <Route element={<SignUp />} path="/sign-up" />
+            <Route element={<div>Sign In Page</div>} path="/signin" />
+            <Route element={<div>Onboarding Page</div>} path="/onboarding" />
+            <Route element={<div>Dashboard Page</div>} path="/dashboard" />
+            <Route element={<div>Home Page</div>} path="/" />
           </Routes>
         </AuthProvider>
       </MemoryRouter>
@@ -158,7 +155,9 @@ describe('SignUp Page', () => {
       const user = userEvent.setup();
       renderSignUp();
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(screen.getByText(/email is required/i)).toBeInTheDocument();
@@ -171,7 +170,9 @@ describe('SignUp Page', () => {
       const emailInput = screen.getByLabelText(/email address/i);
       await user.type(emailInput, 'invalid-email');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(
@@ -186,7 +187,9 @@ describe('SignUp Page', () => {
       const emailInput = screen.getByLabelText(/email address/i);
       await user.type(emailInput, 'valid@example.com');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(
@@ -201,7 +204,9 @@ describe('SignUp Page', () => {
       const emailInput = screen.getByLabelText(/email address/i);
       await user.type(emailInput, 'user@');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(
@@ -218,7 +223,9 @@ describe('SignUp Page', () => {
       const emailInput = screen.getByLabelText(/email address/i);
       await user.type(emailInput, 'valid@example.com');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(screen.getByText(/password is required/i)).toBeInTheDocument();
@@ -231,7 +238,9 @@ describe('SignUp Page', () => {
       const passwordInput = screen.getByLabelText(/^password/i);
       await user.type(passwordInput, 'Short1');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(
@@ -246,7 +255,9 @@ describe('SignUp Page', () => {
       const passwordInput = screen.getByLabelText(/^password/i);
       await user.type(passwordInput, 'lowercase123');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(
@@ -261,7 +272,9 @@ describe('SignUp Page', () => {
       const passwordInput = screen.getByLabelText(/^password/i);
       await user.type(passwordInput, 'NoNumbers');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(
@@ -276,7 +289,9 @@ describe('SignUp Page', () => {
       const passwordInput = screen.getByLabelText(/^password/i);
       await user.type(passwordInput, 'ValidPass123');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(
@@ -302,7 +317,9 @@ describe('SignUp Page', () => {
       await user.type(passwordInput, 'ValidPass123');
       await user.type(confirmPasswordInput, 'DifferentPass123');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(screen.getByText(/passwords do not match/i)).toBeInTheDocument();
@@ -315,7 +332,9 @@ describe('SignUp Page', () => {
       const passwordInput = screen.getByLabelText(/^password/i);
       await user.type(passwordInput, 'ValidPass123');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(
@@ -333,7 +352,9 @@ describe('SignUp Page', () => {
       await user.type(passwordInput, 'ValidPass123');
       await user.type(confirmPasswordInput, 'ValidPass123');
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(
@@ -358,11 +379,19 @@ describe('SignUp Page', () => {
 
       // Fill form with valid data
       await user.type(screen.getByLabelText(/name/i), 'New User');
-      await user.type(screen.getByLabelText(/email address/i), 'newuser@example.com');
+      await user.type(
+        screen.getByLabelText(/email address/i),
+        'newuser@example.com'
+      );
       await user.type(screen.getByLabelText(/^password/i), 'ValidPass123');
-      await user.type(screen.getByLabelText(/confirm password/i), 'ValidPass123');
+      await user.type(
+        screen.getByLabelText(/confirm password/i),
+        'ValidPass123'
+      );
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       // Check loading state
@@ -384,11 +413,19 @@ describe('SignUp Page', () => {
       renderSignUp();
 
       await user.type(screen.getByLabelText(/name/i), 'New User');
-      await user.type(screen.getByLabelText(/email address/i), 'NewUser@Example.com');
+      await user.type(
+        screen.getByLabelText(/email address/i),
+        'NewUser@Example.com'
+      );
       await user.type(screen.getByLabelText(/^password/i), 'ValidPass123');
-      await user.type(screen.getByLabelText(/confirm password/i), 'ValidPass123');
+      await user.type(
+        screen.getByLabelText(/confirm password/i),
+        'ValidPass123'
+      );
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -414,11 +451,19 @@ describe('SignUp Page', () => {
       renderSignUp();
 
       await user.type(screen.getByLabelText(/name/i), 'New User');
-      await user.type(screen.getByLabelText(/email address/i), 'newuser@example.com');
+      await user.type(
+        screen.getByLabelText(/email address/i),
+        'newuser@example.com'
+      );
       await user.type(screen.getByLabelText(/^password/i), 'ValidPass123');
-      await user.type(screen.getByLabelText(/confirm password/i), 'ValidPass123');
+      await user.type(
+        screen.getByLabelText(/confirm password/i),
+        'ValidPass123'
+      );
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -431,18 +476,28 @@ describe('SignUp Page', () => {
 
       server.use(
         http.post(`${API_BASE}/auth/register`, () => {
-          return HttpResponse.json(mockOnboardingCompleteResponse, { status: 201 });
+          return HttpResponse.json(mockOnboardingCompleteResponse, {
+            status: 201,
+          });
         })
       );
 
       renderSignUp();
 
       await user.type(screen.getByLabelText(/name/i), 'Existing User');
-      await user.type(screen.getByLabelText(/email address/i), 'existing@example.com');
+      await user.type(
+        screen.getByLabelText(/email address/i),
+        'existing@example.com'
+      );
       await user.type(screen.getByLabelText(/^password/i), 'ValidPass123');
-      await user.type(screen.getByLabelText(/confirm password/i), 'ValidPass123');
+      await user.type(
+        screen.getByLabelText(/confirm password/i),
+        'ValidPass123'
+      );
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -462,11 +517,19 @@ describe('SignUp Page', () => {
       renderSignUp();
 
       await user.type(screen.getByLabelText(/name/i), 'New User');
-      await user.type(screen.getByLabelText(/email address/i), 'newuser@example.com');
+      await user.type(
+        screen.getByLabelText(/email address/i),
+        'newuser@example.com'
+      );
       await user.type(screen.getByLabelText(/^password/i), 'ValidPass123');
-      await user.type(screen.getByLabelText(/confirm password/i), 'ValidPass123');
+      await user.type(
+        screen.getByLabelText(/confirm password/i),
+        'ValidPass123'
+      );
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -491,11 +554,19 @@ describe('SignUp Page', () => {
       renderSignUp();
 
       await user.type(screen.getByLabelText(/name/i), 'New User');
-      await user.type(screen.getByLabelText(/email address/i), 'existing@example.com');
+      await user.type(
+        screen.getByLabelText(/email address/i),
+        'existing@example.com'
+      );
       await user.type(screen.getByLabelText(/^password/i), 'ValidPass123');
-      await user.type(screen.getByLabelText(/confirm password/i), 'ValidPass123');
+      await user.type(
+        screen.getByLabelText(/confirm password/i),
+        'ValidPass123'
+      );
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -520,11 +591,19 @@ describe('SignUp Page', () => {
       renderSignUp();
 
       await user.type(screen.getByLabelText(/name/i), 'New User');
-      await user.type(screen.getByLabelText(/email address/i), 'newuser@example.com');
+      await user.type(
+        screen.getByLabelText(/email address/i),
+        'newuser@example.com'
+      );
       await user.type(screen.getByLabelText(/^password/i), 'ValidPass123');
-      await user.type(screen.getByLabelText(/confirm password/i), 'ValidPass123');
+      await user.type(
+        screen.getByLabelText(/confirm password/i),
+        'ValidPass123'
+      );
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -537,7 +616,9 @@ describe('SignUp Page', () => {
       renderSignUp();
 
       // Submit empty form to get errors
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(screen.getByText(/email is required/i)).toBeInTheDocument();
@@ -559,7 +640,9 @@ describe('SignUp Page', () => {
       const passwordInput = screen.getByLabelText(/^password/i);
       expect(passwordInput).toHaveAttribute('type', 'password');
 
-      const toggleButton = screen.getAllByRole('button', { name: /show password/i })[0]!;
+      const toggleButton = screen.getAllByRole('button', {
+        name: /show password/i,
+      })[0]!;
       await user.click(toggleButton);
 
       expect(passwordInput).toHaveAttribute('type', 'text');
@@ -575,7 +658,9 @@ describe('SignUp Page', () => {
       const confirmPasswordInput = screen.getByLabelText(/confirm password/i);
       expect(confirmPasswordInput).toHaveAttribute('type', 'password');
 
-      const toggleButtons = screen.getAllByRole('button', { name: /show password/i });
+      const toggleButtons = screen.getAllByRole('button', {
+        name: /show password/i,
+      });
       const confirmToggle = toggleButtons[1]!;
       await user.click(confirmToggle);
 
@@ -644,11 +729,19 @@ describe('SignUp Page', () => {
       renderSignUp();
 
       // Don't fill name field
-      await user.type(screen.getByLabelText(/email address/i), 'noname@example.com');
+      await user.type(
+        screen.getByLabelText(/email address/i),
+        'noname@example.com'
+      );
       await user.type(screen.getByLabelText(/^password/i), 'ValidPass123');
-      await user.type(screen.getByLabelText(/confirm password/i), 'ValidPass123');
+      await user.type(
+        screen.getByLabelText(/confirm password/i),
+        'ValidPass123'
+      );
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -673,11 +766,19 @@ describe('SignUp Page', () => {
       renderSignUp();
 
       await user.type(screen.getByLabelText(/name/i), '  Trimmed Name  ');
-      await user.type(screen.getByLabelText(/email address/i), 'test@example.com');
+      await user.type(
+        screen.getByLabelText(/email address/i),
+        'test@example.com'
+      );
       await user.type(screen.getByLabelText(/^password/i), 'ValidPass123');
-      await user.type(screen.getByLabelText(/confirm password/i), 'ValidPass123');
+      await user.type(
+        screen.getByLabelText(/confirm password/i),
+        'ValidPass123'
+      );
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       await waitFor(() => {
@@ -691,7 +792,9 @@ describe('SignUp Page', () => {
       const user = userEvent.setup();
       renderSignUp();
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       const emailInput = screen.getByLabelText(/email address/i);
@@ -711,11 +814,19 @@ describe('SignUp Page', () => {
       renderSignUp();
 
       await user.type(screen.getByLabelText(/name/i), 'New User');
-      await user.type(screen.getByLabelText(/email address/i), 'newuser@example.com');
+      await user.type(
+        screen.getByLabelText(/email address/i),
+        'newuser@example.com'
+      );
       await user.type(screen.getByLabelText(/^password/i), 'ValidPass123');
-      await user.type(screen.getByLabelText(/confirm password/i), 'ValidPass123');
+      await user.type(
+        screen.getByLabelText(/confirm password/i),
+        'ValidPass123'
+      );
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       expect(submitButton).toHaveAttribute('aria-busy', 'true');
@@ -725,7 +836,9 @@ describe('SignUp Page', () => {
       const user = userEvent.setup();
       renderSignUp();
 
-      const submitButton = screen.getByRole('button', { name: /create account/i });
+      const submitButton = screen.getByRole('button', {
+        name: /create account/i,
+      });
       await user.click(submitButton);
 
       const emailError = screen.getByText(/email is required/i);

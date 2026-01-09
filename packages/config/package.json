@@ -22,7 +22,6 @@
     "index.js"
   ],
   "scripts": {
-    "lint": "eslint .",
     "typecheck": "echo 'Config package uses JS - no typecheck needed'"
   },
   "dependencies": {

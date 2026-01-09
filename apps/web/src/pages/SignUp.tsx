@@ -235,12 +235,7 @@ export function SignUp(): JSX.Element {
     }
 
     return newErrors;
-  }, [
-    formData,
-    validateEmail,
-    validatePassword,
-    validateConfirmPassword,
-  ]);
+  }, [formData, validateEmail, validatePassword, validateConfirmPassword]);
 
   /**
    * Handles input field changes.
@@ -360,8 +355,8 @@ export function SignUp(): JSX.Element {
         {/* Header */}
         <div className="text-center mb-8">
           <Link
-            to="/"
             className="text-white text-3xl font-bold hover:text-primary-200 transition-colors"
+            to="/"
           >
             PLPG
           </Link>
@@ -376,16 +371,18 @@ export function SignUp(): JSX.Element {
         {/* Sign Up Form */}
         <div className="card">
           <form
-            onSubmit={handleSubmit}
             noValidate
             aria-label="Sign up form"
+            onSubmit={(e): void => {
+              void handleSubmit(e);
+            }}
           >
             {/* General Error Alert */}
             {errors.general && (
               <div
+                aria-live="polite"
                 className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm"
                 role="alert"
-                aria-live="polite"
               >
                 {errors.general}
               </div>
@@ -393,24 +390,24 @@ export function SignUp(): JSX.Element {
 
             {/* Name Field (Optional) */}
             <div className="mb-4">
-              <label htmlFor="name" className="label">
+              <label className="label" htmlFor="name">
                 Name{' '}
                 <span className="text-neutral-400 font-normal">(optional)</span>
               </label>
               <input
+                aria-describedby="name-description"
+                autoComplete="name"
+                className="input"
                 id="name"
                 name="name"
+                placeholder="Enter your name"
                 type="text"
-                autoComplete="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                className="input"
-                placeholder="Enter your name"
-                aria-describedby="name-description"
               />
               <p
-                id="name-description"
                 className="mt-1 text-xs text-neutral-500"
+                id="name-description"
               >
                 This will be displayed on your profile
               </p>
@@ -418,26 +415,26 @@ export function SignUp(): JSX.Element {
 
             {/* Email Field */}
             <div className="mb-4">
-              <label htmlFor="email" className="label">
+              <label className="label" htmlFor="email">
                 Email address <span className="text-red-500">*</span>
               </label>
               <input
+                required
+                aria-describedby={errors.email ? 'email-error' : undefined}
+                aria-invalid={!!errors.email}
+                autoComplete="email"
+                className={`input ${errors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
                 id="email"
                 name="email"
+                placeholder="you@example.com"
                 type="email"
-                autoComplete="email"
-                required
                 value={formData.email}
                 onChange={handleInputChange}
-                className={`input ${errors.email ? 'border-red-500 focus:ring-red-500' : ''}`}
-                placeholder="you@example.com"
-                aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? 'email-error' : undefined}
               />
               {errors.email && (
                 <p
-                  id="email-error"
                   className="mt-1 text-sm text-red-600"
+                  id="email-error"
                   role="alert"
                 >
                   {errors.email}
@@ -447,28 +444,28 @@ export function SignUp(): JSX.Element {
 
             {/* Password Field */}
             <div className="mb-4">
-              <label htmlFor="password" className="label">
+              <label className="label" htmlFor="password">
                 Password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
+                  required
+                  aria-describedby="password-requirements password-error"
+                  aria-invalid={!!errors.password}
+                  autoComplete="new-password"
+                  className={`input pr-10 ${errors.password ? 'border-red-500 focus:ring-red-500' : ''}`}
                   id="password"
                   name="password"
+                  placeholder="Create a password"
                   type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className={`input pr-10 ${errors.password ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="Create a password"
-                  aria-invalid={!!errors.password}
-                  aria-describedby="password-requirements password-error"
                 />
                 <button
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-600"
                   type="button"
                   onClick={togglePasswordVisibility}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-600"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
                     <EyeOffIcon className="h-5 w-5" />
@@ -478,16 +475,16 @@ export function SignUp(): JSX.Element {
                 </button>
               </div>
               <p
-                id="password-requirements"
                 className="mt-1 text-xs text-neutral-500"
+                id="password-requirements"
               >
                 Must be at least 8 characters with 1 uppercase letter and 1
                 number
               </p>
               {errors.password && (
                 <p
-                  id="password-error"
                   className="mt-1 text-sm text-red-600"
+                  id="password-error"
                   role="alert"
                 >
                   {errors.password}
@@ -497,32 +494,34 @@ export function SignUp(): JSX.Element {
 
             {/* Confirm Password Field */}
             <div className="mb-6">
-              <label htmlFor="confirmPassword" className="label">
+              <label className="label" htmlFor="confirmPassword">
                 Confirm password <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
+                  required
+                  aria-describedby={
+                    errors.confirmPassword
+                      ? 'confirm-password-error'
+                      : undefined
+                  }
+                  aria-invalid={!!errors.confirmPassword}
+                  autoComplete="new-password"
+                  className={`input pr-10 ${errors.confirmPassword ? 'border-red-500 focus:ring-red-500' : ''}`}
                   id="confirmPassword"
                   name="confirmPassword"
+                  placeholder="Confirm your password"
                   type={showConfirmPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  required
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
-                  className={`input pr-10 ${errors.confirmPassword ? 'border-red-500 focus:ring-red-500' : ''}`}
-                  placeholder="Confirm your password"
-                  aria-invalid={!!errors.confirmPassword}
-                  aria-describedby={
-                    errors.confirmPassword ? 'confirm-password-error' : undefined
-                  }
                 />
                 <button
-                  type="button"
-                  onClick={toggleConfirmPasswordVisibility}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-600"
                   aria-label={
                     showConfirmPassword ? 'Hide password' : 'Show password'
                   }
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-neutral-400 hover:text-neutral-600"
+                  type="button"
+                  onClick={toggleConfirmPasswordVisibility}
                 >
                   {showConfirmPassword ? (
                     <EyeOffIcon className="h-5 w-5" />
@@ -533,8 +532,8 @@ export function SignUp(): JSX.Element {
               </div>
               {errors.confirmPassword && (
                 <p
-                  id="confirm-password-error"
                   className="mt-1 text-sm text-red-600"
+                  id="confirm-password-error"
                   role="alert"
                 >
                   {errors.confirmPassword}
@@ -544,10 +543,10 @@ export function SignUp(): JSX.Element {
 
             {/* Submit Button */}
             <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
               aria-busy={isSubmitting}
+              className="btn-primary w-full py-3 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting}
+              type="submit"
             >
               {isSubmitting ? (
                 <span className="flex items-center justify-center">
@@ -564,8 +563,8 @@ export function SignUp(): JSX.Element {
           <div className="mt-6 text-center text-sm">
             <span className="text-neutral-600">Already have an account? </span>
             <Link
-              to="/signin"
               className="text-primary-600 hover:text-primary-700 font-medium"
+              to="/signin"
             >
               Sign in
             </Link>
@@ -575,11 +574,11 @@ export function SignUp(): JSX.Element {
         {/* Footer */}
         <p className="mt-8 text-center text-sm text-primary-200">
           By creating an account, you agree to our{' '}
-          <Link to="/terms" className="underline hover:text-white">
+          <Link className="underline hover:text-white" to="/terms">
             Terms of Service
           </Link>{' '}
           and{' '}
-          <Link to="/privacy" className="underline hover:text-white">
+          <Link className="underline hover:text-white" to="/privacy">
             Privacy Policy
           </Link>
         </p>
@@ -598,24 +597,24 @@ export function SignUp(): JSX.Element {
 function EyeIcon({ className }: { className?: string }): JSX.Element {
   return (
     <svg
+      aria-hidden="true"
       className={className}
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
     >
       <path
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={2}
-        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
       />
       <path
+        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={2}
-        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
       />
     </svg>
   );
@@ -631,18 +630,18 @@ function EyeIcon({ className }: { className?: string }): JSX.Element {
 function EyeOffIcon({ className }: { className?: string }): JSX.Element {
   return (
     <svg
+      aria-hidden="true"
       className={className}
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
     >
       <path
+        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={2}
-        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
       />
     </svg>
   );
@@ -658,11 +657,11 @@ function EyeOffIcon({ className }: { className?: string }): JSX.Element {
 function LoadingSpinner({ className }: { className?: string }): JSX.Element {
   return (
     <svg
+      aria-hidden="true"
       className={`animate-spin ${className}`}
       fill="none"
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
     >
       <circle
         className="opacity-25"
@@ -674,8 +673,8 @@ function LoadingSpinner({ className }: { className?: string }): JSX.Element {
       />
       <path
         className="opacity-75"
-        fill="currentColor"
         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        fill="currentColor"
       />
     </svg>
   );

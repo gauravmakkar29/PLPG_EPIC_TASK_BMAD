@@ -1,182 +1,217 @@
 /**
- * @fileoverview JWT utility module for token generation and verification.
- * Provides functions for creating and validating JWT access and refresh tokens.
+ * @fileoverview JWT utility functions for token generation and verification.
+ * Provides secure token management for authentication.
  *
  * @module @plpg/api/lib/jwt
- * @description Secure JWT handling for PLPG authentication.
  */
 
 import jwt from 'jsonwebtoken';
-import type { AuthTokenPayload, RefreshTokenPayload, UserRole } from '@plpg/shared';
 import { AuthenticationError } from '@plpg/shared';
-import { env } from './env';
+import { logger } from './logger';
+
+/**
+ * JWT payload structure for access tokens.
+ *
+ * @interface JwtPayload
+ * @property {string} userId - User's unique identifier
+ * @property {string} email - User's email address
+ * @property {string} role - User's role (free, pro, admin)
+ */
+export interface JwtPayload {
+  userId: string;
+  email: string;
+  role: string;
+}
+
+/**
+ * JWT secret for access token signing.
+ * Should be set in environment variables.
+ */
+const JWT_SECRET =
+  process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+
+/**
+ * JWT secret for refresh token signing.
+ * Should be different from access token secret.
+ */
+const JWT_REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET ||
+  'your-refresh-secret-key-change-in-production';
 
 /**
  * Access token expiration time.
- * @constant ACCESS_TOKEN_EXPIRY
+ * Default: 15 minutes for security.
+ * Extended to 7 days if remember me is enabled.
  */
 const ACCESS_TOKEN_EXPIRY = '15m';
+const REMEMBER_ME_ACCESS_TOKEN_EXPIRY = '7d';
 
 /**
  * Refresh token expiration time.
- * @constant REFRESH_TOKEN_EXPIRY
+ * Default: 7 days.
+ * Extended to 30 days if remember me is enabled.
  */
 const REFRESH_TOKEN_EXPIRY = '7d';
+const REMEMBER_ME_REFRESH_TOKEN_EXPIRY = '30d';
 
 /**
  * Refresh token expiration in milliseconds (7 days).
- * @constant REFRESH_TOKEN_EXPIRY_MS
+ * Used for setting cookie max-age and database expiry.
  */
 export const REFRESH_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Payload for generating an access token.
+ * Generates a JWT access token for a user.
  *
- * @interface GenerateAccessTokenPayload
- * @property {string} userId - User's unique identifier
- * @property {string} email - User's email address
- * @property {UserRole} role - User's access role
- */
-export interface GenerateAccessTokenPayload {
-  userId: string;
-  email: string;
-  role: UserRole;
-}
-
-/**
- * Payload for generating a refresh token.
- *
- * @interface GenerateRefreshTokenPayload
- * @property {string} userId - User's unique identifier
- * @property {string} tokenId - Unique identifier for this refresh token
- */
-export interface GenerateRefreshTokenPayload {
-  userId: string;
-  tokenId: string;
-}
-
-/**
- * Generates a JWT access token.
- *
- * @function generateAccessToken
- * @param {GenerateAccessTokenPayload} payload - Data to encode in the token
+ * @param {JwtPayload} payload - User data to encode in the token
+ * @param {boolean} [rememberMe=false] - Whether to extend token expiry
  * @returns {string} Signed JWT access token
  *
  * @example
+ * ```typescript
  * const token = generateAccessToken({
- *   userId: 'uuid-123',
+ *   userId: 'user-123',
  *   email: 'user@example.com',
  *   role: 'free'
  * });
+ * ```
  */
-export function generateAccessToken(payload: GenerateAccessTokenPayload): string {
-  return jwt.sign(
-    {
-      userId: payload.userId,
-      email: payload.email,
-      role: payload.role,
-    },
-    env.JWT_SECRET,
-    {
-      expiresIn: ACCESS_TOKEN_EXPIRY,
-      issuer: 'plpg-api',
-      audience: 'plpg-client',
-    }
-  );
+export function generateAccessToken(
+  payload: JwtPayload,
+  rememberMe: boolean = false
+): string {
+  const expiry = rememberMe
+    ? REMEMBER_ME_ACCESS_TOKEN_EXPIRY
+    : ACCESS_TOKEN_EXPIRY;
+
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: expiry,
+    issuer: 'plpg-api',
+    audience: 'plpg-web',
+  });
 }
 
 /**
- * Generates a JWT refresh token.
+ * Generates a JWT refresh token for a user.
  *
- * @function generateRefreshToken
- * @param {GenerateRefreshTokenPayload} payload - Data to encode in the token
+ * @param {JwtPayload} payload - User data to encode in the token
+ * @param {boolean} [rememberMe=false] - Whether to extend token expiry
  * @returns {string} Signed JWT refresh token
  *
  * @example
+ * ```typescript
  * const refreshToken = generateRefreshToken({
- *   userId: 'uuid-123',
- *   tokenId: 'token-uuid-456'
+ *   userId: 'user-123',
+ *   email: 'user@example.com',
+ *   role: 'free'
  * });
+ * ```
  */
-export function generateRefreshToken(payload: GenerateRefreshTokenPayload): string {
-  return jwt.sign(
-    {
-      userId: payload.userId,
-      tokenId: payload.tokenId,
-    },
-    env.JWT_REFRESH_SECRET,
-    {
-      expiresIn: REFRESH_TOKEN_EXPIRY,
-      issuer: 'plpg-api',
-      audience: 'plpg-client',
-    }
-  );
+export function generateRefreshToken(
+  payload: JwtPayload,
+  rememberMe: boolean = false
+): string {
+  const expiry = rememberMe
+    ? REMEMBER_ME_REFRESH_TOKEN_EXPIRY
+    : REFRESH_TOKEN_EXPIRY;
+
+  return jwt.sign(payload, JWT_REFRESH_SECRET, {
+    expiresIn: expiry,
+    issuer: 'plpg-api',
+    audience: 'plpg-web',
+  });
 }
 
 /**
  * Verifies and decodes a JWT access token.
  *
- * @function verifyAccessToken
- * @param {string} token - JWT access token to verify
- * @returns {AuthTokenPayload} Decoded token payload
- * @throws {AuthenticationError} If the token is invalid or expired
+ * @param {string} token - JWT token to verify
+ * @returns {JwtPayload} Decoded token payload
+ *
+ * @throws {Error} Token is invalid, expired, or malformed
  *
  * @example
+ * ```typescript
  * try {
  *   const payload = verifyAccessToken(token);
- *   console.log(payload.userId);
+ *   console.log('User ID:', payload.userId);
  * } catch (error) {
- *   // Handle invalid token
+ *   console.error('Invalid token:', error.message);
  * }
+ * ```
  */
-export function verifyAccessToken(token: string): AuthTokenPayload {
+export function verifyAccessToken(token: string): JwtPayload {
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET, {
+    const decoded = jwt.verify(token, JWT_SECRET, {
       issuer: 'plpg-api',
-      audience: 'plpg-client',
-    }) as AuthTokenPayload;
+      audience: 'plpg-web',
+    }) as JwtPayload;
+
     return decoded;
   } catch (error) {
+    logger.error({ err: error }, 'Access token verification failed');
     if (error instanceof jwt.TokenExpiredError) {
       throw new AuthenticationError('Token has expired');
     }
-    if (error instanceof jwt.JsonWebTokenError) {
-      throw new AuthenticationError('Invalid token');
-    }
-    throw new AuthenticationError('Token verification failed');
+    throw new AuthenticationError('Invalid or expired token');
   }
 }
 
 /**
  * Verifies and decodes a JWT refresh token.
  *
- * @function verifyRefreshToken
  * @param {string} token - JWT refresh token to verify
- * @returns {RefreshTokenPayload} Decoded token payload
- * @throws {AuthenticationError} If the token is invalid or expired
+ * @returns {JwtPayload} Decoded token payload
+ *
+ * @throws {Error} Token is invalid, expired, or malformed
  *
  * @example
+ * ```typescript
  * try {
- *   const payload = verifyRefreshToken(refreshToken);
- *   console.log(payload.tokenId);
+ *   const payload = verifyRefreshToken(token);
+ *   console.log('User ID:', payload.userId);
  * } catch (error) {
- *   // Handle invalid refresh token
+ *   console.error('Invalid refresh token:', error.message);
  * }
+ * ```
  */
-export function verifyRefreshToken(token: string): RefreshTokenPayload {
+export function verifyRefreshToken(token: string): JwtPayload {
   try {
-    const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET, {
+    const decoded = jwt.verify(token, JWT_REFRESH_SECRET, {
       issuer: 'plpg-api',
-      audience: 'plpg-client',
-    }) as RefreshTokenPayload;
+      audience: 'plpg-web',
+    }) as JwtPayload;
+
     return decoded;
   } catch (error) {
+    logger.error({ err: error }, 'Refresh token verification failed');
     if (error instanceof jwt.TokenExpiredError) {
       throw new AuthenticationError('Refresh token has expired');
     }
-    if (error instanceof jwt.JsonWebTokenError) {
-      throw new AuthenticationError('Invalid refresh token');
-    }
-    throw new AuthenticationError('Refresh token verification failed');
+    throw new AuthenticationError('Invalid or expired refresh token');
+  }
+}
+
+/**
+ * Gets the expiration time in seconds for a token type.
+ *
+ * @param {'access' | 'refresh'} tokenType - Type of token
+ * @param {boolean} [rememberMe=false] - Whether remember me is enabled
+ * @returns {number} Expiration time in seconds
+ *
+ * @example
+ * ```typescript
+ * const expirySeconds = getTokenExpiry('access', false);
+ * // Returns 900 (15 minutes)
+ * ```
+ */
+export function getTokenExpiry(
+  tokenType: 'access' | 'refresh',
+  rememberMe: boolean = false
+): number {
+  if (tokenType === 'access') {
+    return rememberMe ? 7 * 24 * 60 * 60 : 15 * 60; // 7 days or 15 minutes
+  } else {
+    return rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60; // 30 days or 7 days
   }
 }

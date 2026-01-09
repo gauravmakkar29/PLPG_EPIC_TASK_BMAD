@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+
 import {
   emailSchema,
   passwordSchema,
@@ -77,11 +78,7 @@ describe('Auth Validation Schemas', () => {
      * Tests that strong passwords pass validation.
      */
     it('accepts strong passwords', () => {
-      const validPasswords = [
-        'SecureP@ss123',
-        'MyP@ssw0rd!',
-        'C0mpl3x!Pass',
-      ];
+      const validPasswords = ['SecureP@ss123', 'MyP@ssw0rd!', 'C0mpl3x!Pass'];
 
       for (const password of validPasswords) {
         const result = passwordSchema.safeParse(password);

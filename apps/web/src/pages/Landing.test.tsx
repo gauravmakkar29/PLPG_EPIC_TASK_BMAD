@@ -6,7 +6,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@/test/utils';
+
+import { render, screen } from '../test/utils';
+
 import { Landing } from './Landing';
 
 describe('Landing Page', () => {

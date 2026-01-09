@@ -8,7 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import { authRoutes } from './auth.routes';
+import authRoutes from './auth.routes';
 
 // JWT secret for tests - must match process.env.JWT_SECRET
 const TEST_JWT_SECRET = 'test-jwt-secret-at-least-32-characters-long';
@@ -35,6 +35,15 @@ const mockPrisma = vi.hoisted(() => ({
 vi.mock('../lib/prisma', () => ({
   getPrisma: () => mockPrisma,
   prisma: mockPrisma,
+}));
+
+// Mock rate limiter to prevent 429 errors in tests
+vi.mock('../middleware/rateLimiter.middleware', () => ({
+  authRateLimiter: (
+    _req: express.Request,
+    _res: express.Response,
+    next: express.NextFunction
+  ) => next(),
 }));
 
 vi.mock('../lib/env', () => ({
@@ -76,7 +85,7 @@ vi.mock('../lib/jwt', async () => {
 });
 
 // Create test app
-function createTestApp() {
+function createTestApp(): express.Express {
   const app = express();
   app.use(express.json());
   app.use('/auth', authRoutes);
@@ -135,19 +144,21 @@ describe('POST /auth/register', () => {
 
     // Default mock implementations
     mockPrisma.user.findUnique.mockResolvedValue(null);
-    mockPrisma.$transaction.mockImplementation(async (callback) => {
-      return callback({
-        user: {
-          create: vi.fn().mockResolvedValue(mockCreatedUser),
-        },
-        subscription: {
-          create: vi.fn().mockResolvedValue({}),
-        },
-        refreshToken: {
-          create: vi.fn().mockResolvedValue(mockRefreshToken),
-        },
-      });
-    });
+    mockPrisma.$transaction.mockImplementation(
+      async (callback: (tx: unknown) => Promise<unknown>) => {
+        return callback({
+          user: {
+            create: vi.fn().mockResolvedValue(mockCreatedUser),
+          },
+          subscription: {
+            create: vi.fn().mockResolvedValue({}),
+          },
+          refreshToken: {
+            create: vi.fn().mockResolvedValue(mockRefreshToken),
+          },
+        });
+      }
+    );
   });
 
   afterEach(() => {

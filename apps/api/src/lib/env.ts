@@ -16,7 +16,9 @@ import { z } from 'zod';
  */
 const envSchema = z.object({
   // Server configuration
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
   PORT: z.string().default('3001'),
 
   // Database
@@ -24,7 +26,9 @@ const envSchema = z.object({
 
   // JWT configuration
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
-  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
+  JWT_REFRESH_SECRET: z
+    .string()
+    .min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
 
   // Bcrypt configuration
   BCRYPT_ROUNDS: z.string().default('12'),

@@ -1,39 +1,47 @@
 /**
- * @fileoverview Authentication service module.
- * Handles user registration, password hashing, and token management.
+ * @fileoverview Authentication service for PLPG API.
+ * Handles user login, registration, password verification, and JWT token generation.
  *
  * @module @plpg/api/services/auth
- * @description Core authentication business logic for PLPG.
+ * @description Core authentication business logic.
  */
 
 import bcrypt from 'bcrypt';
-import crypto from 'node:crypto';
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import { prisma, getPrisma } from '../lib/prisma';
+import { logger } from '../lib/logger';
+import type {
+  AuthResponse,
+  AuthUser,
+  AuthTokenPayload,
+  RefreshTokenPayload,
+  UserRole,
+  SubscriptionStatus,
+} from '@plpg/shared';
 import type { RegisterInput } from '@plpg/shared/validation';
-import type { AuthResponse, AuthUser, SubscriptionStatus } from '@plpg/shared';
 import { ConflictError, NotFoundError } from '@plpg/shared';
 import type { AuthenticatedUser } from '../types';
-import { getPrisma } from '../lib/prisma';
-import {
-  generateAccessToken,
-  generateRefreshToken,
-  REFRESH_TOKEN_EXPIRY_MS,
-  getBcryptRounds,
-  getTrialDurationDays,
-} from '../lib';
-import { logger } from '../lib/logger';
+
+/**
+ * JWT configuration constants.
+ */
+const JWT_SECRET =
+  process.env['JWT_SECRET'] || 'development-secret-change-in-production';
+const JWT_REFRESH_SECRET =
+  process.env['JWT_REFRESH_SECRET'] || 'refresh-secret-change-in-production';
+const ACCESS_TOKEN_EXPIRY = '15m';
+const REFRESH_TOKEN_EXPIRY = '7d';
+const REFRESH_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
 
 /**
  * Bcrypt cost factor for password hashing.
  * Set to 12 as per security requirements.
- *
- * @constant BCRYPT_COST_FACTOR
  */
 export const BCRYPT_COST_FACTOR = 12;
 
 /**
  * Analytics event types for authentication flows.
- *
- * @constant AUTH_EVENTS
  */
 export const AUTH_EVENTS = {
   SIGNUP_COMPLETED: 'signup_completed',
@@ -42,76 +50,133 @@ export const AUTH_EVENTS = {
 } as const;
 
 /**
+ * Subscription status based on user data.
+ */
+export type SubscriptionStatusType = 'free' | 'trial' | 'pro';
+
+/**
+ * Login result containing auth tokens and user data.
+ */
+export interface LoginResult {
+  user: AuthUser;
+  accessToken: string;
+  refreshToken: string;
+  subscriptionStatus: SubscriptionStatusType;
+}
+
+/**
  * Registration result containing user data and tokens.
- *
- * @interface RegisterResult
- * @property {AuthUser} user - Sanitized user object (no password)
- * @property {string} accessToken - JWT access token
- * @property {string} refreshToken - JWT refresh token
  */
-export interface RegisterResult extends AuthResponse {}
+export type RegisterResult = AuthResponse;
 
 /**
- * Hashes a password using bcrypt with the configured cost factor.
- *
- * @function hashPassword
- * @param {string} password - Plain text password to hash
- * @returns {Promise<string>} Bcrypt hashed password
- *
- * @example
- * const hash = await hashPassword('MySecurePassword123!');
+ * Session response containing user data and subscription status.
  */
-export async function hashPassword(password: string): Promise<string> {
-  const rounds = getBcryptRounds();
-  return bcrypt.hash(password, rounds);
+export interface SessionResponse {
+  userId: string;
+  email: string;
+  name: string | null;
+  subscriptionStatus: SubscriptionStatus;
+  trialEndsAt: Date | null;
+  isVerified: boolean;
+  role: 'free' | 'pro' | 'admin';
 }
 
 /**
- * Compares a plain text password with a bcrypt hash.
- *
- * @function comparePassword
- * @param {string} password - Plain text password to verify
- * @param {string} hash - Bcrypt hash to compare against
- * @returns {Promise<boolean>} True if password matches hash
- *
- * @example
- * const isValid = await comparePassword('MyPassword123!', storedHash);
+ * Determines the subscription status for a user (for login).
  */
-export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+function determineSubscriptionStatus(user: {
+  role: string;
+  subscription: {
+    plan: string;
+    status: string;
+    expiresAt: Date | null;
+  } | null;
+  createdAt: Date;
+}): SubscriptionStatusType {
+  // Admins get pro status
+  if (user.role === 'admin') {
+    return 'pro';
+  }
+
+  // Check active pro subscription
+  if (user.subscription) {
+    const { plan, status, expiresAt } = user.subscription;
+
+    if (plan === 'pro' && status === 'active') {
+      if (!expiresAt || new Date(expiresAt) > new Date()) {
+        return 'pro';
+      }
+    }
+  }
+
+  // Check if user is in trial period (first 14 days)
+  const trialPeriodDays = 14;
+  const trialEndDate = new Date(user.createdAt);
+  trialEndDate.setDate(trialEndDate.getDate() + trialPeriodDays);
+
+  if (new Date() < trialEndDate) {
+    return 'trial';
+  }
+
+  return 'free';
 }
 
 /**
- * Calculates trial end date based on configuration.
- *
- * @function calculateTrialEndDate
- * @param {Date} startDate - Trial start date
- * @returns {Date} Trial end date
- *
- * @example
- * const trialEnd = calculateTrialEndDate(new Date());
+ * Generates JWT access token.
  */
-export function calculateTrialEndDate(startDate: Date): Date {
-  const durationDays = getTrialDurationDays();
-  const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + durationDays);
-  return endDate;
+function generateAccessToken(
+  userId: string,
+  email: string,
+  role: UserRole
+): string {
+  const payload: Omit<AuthTokenPayload, 'iat' | 'exp'> = {
+    userId,
+    email,
+    role,
+  };
+
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
 }
 
 /**
- * Transforms a database user to a sanitized AuthUser object.
- * Removes sensitive fields like passwordHash.
- *
- * @function toAuthUser
- * @param {object} user - Database user object
- * @returns {AuthUser} Sanitized user object for API responses
+ * Generates JWT refresh token and stores it in database.
+ */
+async function generateRefreshToken(userId: string): Promise<string> {
+  const tokenId = uuidv4();
+  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS);
+
+  const payload: Omit<RefreshTokenPayload, 'iat' | 'exp'> = {
+    userId,
+    tokenId,
+  };
+
+  const token = jwt.sign(payload, JWT_REFRESH_SECRET, {
+    expiresIn: REFRESH_TOKEN_EXPIRY,
+  });
+
+  // Store refresh token in database
+  await prisma.refreshToken.create({
+    data: {
+      id: tokenId,
+      token,
+      userId,
+      expiresAt,
+    },
+  });
+
+  return token;
+}
+
+/**
+ * Transforms database user to AuthUser response format.
  */
 export function toAuthUser(user: {
   id: string;
   email: string;
   name: string | null;
   avatarUrl: string | null;
-  role: 'free' | 'pro' | 'admin';
+  role: string;
   emailVerified: boolean;
   createdAt: Date;
 }): AuthUser {
@@ -120,22 +185,52 @@ export function toAuthUser(user: {
     email: user.email,
     name: user.name,
     avatarUrl: user.avatarUrl,
-    role: user.role,
+    role: user.role as UserRole,
     isVerified: user.emailVerified,
     createdAt: user.createdAt,
   };
 }
 
 /**
+ * Hashes a password using bcrypt.
+ */
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_COST_FACTOR);
+}
+
+/**
+ * Compares a plain text password with a bcrypt hash.
+ */
+export async function comparePassword(
+  password: string,
+  hash: string
+): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+
+/**
+ * Verifies a password against a hash using bcrypt.
+ * (Alias for comparePassword for backward compatibility)
+ */
+export async function verifyPassword(
+  password: string,
+  hash: string
+): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+
+/**
+ * Calculates trial end date based on configuration.
+ */
+export function calculateTrialEndDate(startDate: Date): Date {
+  const TRIAL_DURATION_DAYS = 14;
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + TRIAL_DURATION_DAYS);
+  return endDate;
+}
+
+/**
  * Tracks an authentication analytics event.
- * Currently logs to application logger; can be extended for analytics services.
- *
- * @function trackAuthEvent
- * @param {string} event - Event name to track
- * @param {object} data - Event metadata
- *
- * @example
- * trackAuthEvent('signup_completed', { userId: 'uuid-123' });
  */
 export function trackAuthEvent(
   event: string,
@@ -145,35 +240,71 @@ export function trackAuthEvent(
 }
 
 /**
- * Registers a new user in the system.
- *
- * This function performs the following operations:
- * 1. Checks for existing email (uniqueness validation)
- * 2. Hashes password with bcrypt (cost factor 12)
- * 3. Creates user record with trial dates
- * 4. Creates subscription record for trial period
- * 5. Generates refresh token record
- * 6. Generates JWT access and refresh tokens
- * 7. Tracks signup_completed analytics event
- *
- * @function registerUser
- * @param {RegisterInput} input - Registration data containing email, password, and name
- * @returns {Promise<RegisterResult>} User data and authentication tokens
- * @throws {ConflictError} If email is already registered (409)
- *
- * @example
- * const result = await registerUser({
- *   email: 'user@example.com',
- *   password: 'SecurePass123!',
- *   name: 'John Doe'
- * });
- * // Returns: { user, accessToken, refreshToken }
+ * Authenticates user with email and password.
  */
-export async function registerUser(input: RegisterInput): Promise<RegisterResult> {
-  const prisma = getPrisma();
+export async function loginUser(
+  email: string,
+  password: string
+): Promise<LoginResult | null> {
+  try {
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() },
+      include: { subscription: true },
+    });
+
+    // User not found - return null (generic error)
+    if (!user) {
+      logger.debug({ email }, 'Login attempt with non-existent email');
+      return null;
+    }
+
+    // Verify password with bcrypt
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+
+    if (!isPasswordValid) {
+      logger.debug({ userId: user.id }, 'Login attempt with invalid password');
+      return null;
+    }
+
+    // Generate tokens
+    const accessToken = generateAccessToken(
+      user.id,
+      user.email,
+      user.role as UserRole
+    );
+    const refreshToken = await generateRefreshToken(user.id);
+
+    // Determine subscription status
+    const subscriptionStatus = determineSubscriptionStatus(user);
+
+    logger.info(
+      { userId: user.id, subscriptionStatus },
+      'User logged in successfully'
+    );
+
+    return {
+      user: toAuthUser(user),
+      accessToken,
+      refreshToken,
+      subscriptionStatus,
+    };
+  } catch (error) {
+    logger.error({ error, email }, 'Error during login');
+    throw error;
+  }
+}
+
+/**
+ * Registers a new user in the system.
+ */
+export async function registerUser(
+  input: RegisterInput
+): Promise<RegisterResult> {
+  const db = getPrisma();
 
   // Check for existing user with the same email
-  const existingUser = await prisma.user.findUnique({
+  const existingUser = await db.user.findUnique({
     where: { email: input.email },
   });
 
@@ -188,11 +319,8 @@ export async function registerUser(input: RegisterInput): Promise<RegisterResult
   const trialStartDate = new Date();
   const trialEndDate = calculateTrialEndDate(trialStartDate);
 
-  // Generate unique token ID for refresh token tracking
-  const tokenId = crypto.randomUUID();
-
-  // Create user, subscription, and refresh token in a transaction
-  const { user, refreshTokenRecord } = await prisma.$transaction(async (tx) => {
+  // Create user and subscription in a transaction
+  const user = await db.$transaction(async (tx) => {
     // Create user
     const newUser = await tx.user.create({
       data: {
@@ -214,29 +342,16 @@ export async function registerUser(input: RegisterInput): Promise<RegisterResult
       },
     });
 
-    // Create refresh token record
-    const newRefreshToken = await tx.refreshToken.create({
-      data: {
-        token: tokenId,
-        userId: newUser.id,
-        expiresAt: new Date(Date.now() + REFRESH_TOKEN_EXPIRY_MS),
-      },
-    });
-
-    return { user: newUser, refreshTokenRecord: newRefreshToken };
+    return newUser;
   });
 
   // Generate JWT tokens
-  const accessToken = generateAccessToken({
-    userId: user.id,
-    email: user.email,
-    role: user.role,
-  });
-
-  const refreshToken = generateRefreshToken({
-    userId: user.id,
-    tokenId: refreshTokenRecord.token,
-  });
+  const accessToken = generateAccessToken(
+    user.id,
+    user.email,
+    user.role as UserRole
+  );
+  const refreshToken = await generateRefreshToken(user.id);
 
   // Track signup analytics event
   trackAuthEvent(AUTH_EVENTS.SIGNUP_COMPLETED, {
@@ -254,42 +369,31 @@ export async function registerUser(input: RegisterInput): Promise<RegisterResult
 }
 
 /**
- * Session response containing user data and subscription status.
- *
- * @interface SessionResponse
- * @description Response format for GET /auth/me endpoint.
- *
- * @property {string} userId - User's unique identifier
- * @property {string} email - User's email address
- * @property {string | null} name - User's display name
- * @property {SubscriptionStatus} subscriptionStatus - Current subscription status
- * @property {Date | null} trialEndsAt - Trial end date (null if not on trial)
- * @property {boolean} isVerified - Email verification status
- * @property {string} role - User's role (free/pro/admin)
+ * Invalidates a refresh token by removing it from the database.
  */
-export interface SessionResponse {
-  userId: string;
-  email: string;
-  name: string | null;
-  subscriptionStatus: SubscriptionStatus;
-  trialEndsAt: Date | null;
-  isVerified: boolean;
-  role: 'free' | 'pro' | 'admin';
+export async function invalidateRefreshToken(token: string): Promise<void> {
+  try {
+    await prisma.refreshToken.delete({
+      where: { token },
+    });
+  } catch {
+    // Token may not exist, which is fine
+    logger.debug('Attempted to invalidate non-existent refresh token');
+  }
+}
+
+/**
+ * Invalidates all refresh tokens for a user (logout all sessions).
+ */
+export async function invalidateAllUserTokens(userId: string): Promise<void> {
+  await prisma.refreshToken.deleteMany({
+    where: { userId },
+  });
+  logger.info({ userId }, 'All refresh tokens invalidated for user');
 }
 
 /**
  * Determines subscription status based on user's subscription data.
- *
- * @function getSubscriptionStatus
- * @param {AuthenticatedUser} user - Authenticated user with subscription
- * @returns {SubscriptionStatus} Current subscription status
- *
- * @description
- * Returns the subscription status:
- * - 'active': Has valid active subscription
- * - 'expired': Subscription has expired
- * - 'cancelled': Subscription was cancelled
- * - 'active': Default for free users without subscription record
  */
 export function getSubscriptionStatus(user: AuthenticatedUser): SubscriptionStatus {
   if (!user.subscription) {
@@ -300,17 +404,6 @@ export function getSubscriptionStatus(user: AuthenticatedUser): SubscriptionStat
 
 /**
  * Gets trial end date from user's subscription.
- *
- * @function getTrialEndsAt
- * @param {AuthenticatedUser} user - Authenticated user with subscription
- * @returns {Date | null} Trial end date or null if not on trial/no subscription
- *
- * @description
- * Returns the trial end date for users on a free plan with an expiration date.
- * Returns null for:
- * - Users without subscription
- * - Pro users (they don't have a trial)
- * - Users whose trial has already ended
  */
 export function getTrialEndsAt(user: AuthenticatedUser): Date | null {
   if (!user.subscription) {
@@ -327,21 +420,6 @@ export function getTrialEndsAt(user: AuthenticatedUser): Date | null {
 
 /**
  * Gets the current user session information.
- *
- * @function getCurrentSession
- * @param {AuthenticatedUser} user - Authenticated user from request
- * @returns {SessionResponse} Current session data
- *
- * @description
- * Transforms the authenticated user into a session response containing:
- * - User identification (userId, email, name)
- * - Subscription status
- * - Trial information
- * - Email verification status
- *
- * @example
- * const session = getCurrentSession(req.user);
- * // Returns: { userId, email, name, subscriptionStatus, trialEndsAt, isVerified, role }
  */
 export function getCurrentSession(user: AuthenticatedUser): SessionResponse {
   return {
@@ -357,20 +435,11 @@ export function getCurrentSession(user: AuthenticatedUser): SessionResponse {
 
 /**
  * Fetches a user by ID with subscription data.
- *
- * @function getUserById
- * @async
- * @param {string} userId - User's unique identifier
- * @returns {Promise<AuthenticatedUser>} User with subscription data
- * @throws {NotFoundError} If user is not found
- *
- * @example
- * const user = await getUserById('uuid-123');
  */
 export async function getUserById(userId: string): Promise<AuthenticatedUser> {
-  const prisma = getPrisma();
+  const db = getPrisma();
 
-  const user = await prisma.user.findUnique({
+  const user = await db.user.findUnique({
     where: { id: userId },
     include: { subscription: true },
   });

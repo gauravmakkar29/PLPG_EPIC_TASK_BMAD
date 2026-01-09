@@ -210,8 +210,12 @@ export function formatOrdinal(num: number): string {
  * pluralize(1, 'module') // '1 module'
  * pluralize(5, 'module') // '5 modules'
  */
-export function pluralize(count: number, singular: string, plural?: string): string {
-  const word = count === 1 ? singular : (plural || `${singular}s`);
+export function pluralize(
+  count: number,
+  singular: string,
+  plural?: string
+): string {
+  const word = count === 1 ? singular : (plural ?? `${singular}s`);
   return `${count} ${word}`;
 }
 
@@ -227,8 +231,13 @@ export function pluralize(count: number, singular: string, plural?: string): str
  * getInitials('John Doe') // 'JD'
  * getInitials('John') // 'J'
  */
-export function getInitials(name: string | null | undefined, maxLength = 2): string {
-  if (!name) return '';
+export function getInitials(
+  name: string | null | undefined,
+  maxLength = 2
+): string {
+  if (!name) {
+    return '';
+  }
   return name
     .split(' ')
     .map((part) => part.charAt(0))

@@ -35,7 +35,7 @@ export interface AuthUser {
  * @property {Function} register - Function to register new user and store session
  * @property {Function} logout - Function to clear authentication and user session
  */
-interface AuthContextValue {
+export interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   isAuthenticated: boolean;

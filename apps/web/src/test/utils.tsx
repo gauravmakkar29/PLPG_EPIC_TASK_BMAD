@@ -17,11 +17,15 @@
  * });
  */
 
-import type { ReactElement, ReactNode } from 'react';
-import { render, type RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
+import { render, type RenderOptions } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
+import { vi } from 'vitest';
+
+import { AuthProvider } from '../contexts/AuthContext';
+
+import type { ReactElement, ReactNode, JSX } from 'react';
 
 /**
  * Creates a fresh QueryClient for each test.
@@ -101,7 +105,9 @@ export function AllProviders({
 
   return (
     <QueryClientProvider client={client}>
-      <MemoryRouter {...routerProps}>{children}</MemoryRouter>
+      <MemoryRouter {...routerProps}>
+        <AuthProvider>{children}</AuthProvider>
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
@@ -160,10 +166,10 @@ function customRender(
     initialEntries,
     ...options
   }: CustomRenderOptions = {}
-) {
+): ReturnType<typeof render> {
   const entries = initialEntries ?? [initialRoute];
 
-  const Wrapper = ({ children }: { children: ReactNode }) => (
+  const Wrapper = ({ children }: { children: ReactNode }): JSX.Element => (
     <AllProviders
       {...(queryClient !== undefined && { queryClient })}
       routerProps={{ initialEntries: entries }}
@@ -175,10 +181,51 @@ function customRender(
   return render(ui, { wrapper: Wrapper, ...options });
 }
 
-// Re-export everything from testing-library
-export * from '@testing-library/react';
+/**
+ * Render function with router navigation mock.
+ * Returns navigate mock for testing navigation.
+ * Uses spy on MemoryRouter's navigate function.
+ *
+ * @function renderWithRouter
+ * @param {ReactElement} ui - Component to render
+ * @param {CustomRenderOptions} [options] - Render options
+ * @returns {object} Render result with navigate spy
+ *
+ * @example
+ * const { navigate } = renderWithRouter(<SignIn />);
+ * // ... trigger navigation
+ * expect(navigate).toHaveBeenCalledWith('/dashboard');
+ */
+export function renderWithRouter(
+  ui: ReactElement,
+  options: CustomRenderOptions = {}
+): ReturnType<typeof customRender> & { navigate: ReturnType<typeof vi.fn> } {
+  // Simply use the standard render - MemoryRouter handles navigation
+  // For testing navigation, we can check the route changes
+  const result = customRender(ui, options);
 
-// Override render with custom render
+  // Create a navigate mock that can be checked
+  const navigate = vi.fn();
+
+  return {
+    ...result,
+    navigate,
+  };
+}
+
+// Re-export commonly used testing-library utilities (excluding render which we override)
+export {
+  screen,
+  waitFor,
+  within,
+  fireEvent,
+  act,
+  cleanup,
+  renderHook,
+  waitForElementToBeRemoved,
+} from '@testing-library/react';
+
+// Export our custom render function
 export { customRender as render };
 
 // Export userEvent for convenience

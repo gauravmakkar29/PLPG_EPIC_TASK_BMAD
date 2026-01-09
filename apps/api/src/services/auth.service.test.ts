@@ -1,13 +1,20 @@
 /**
  * @fileoverview Unit tests for authentication service.
- * Tests user registration, password hashing, and token generation.
+ * Tests login, password verification, and token generation.
  *
  * @module @plpg/api/services/auth.service.test
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import bcrypt from 'bcrypt';
-import type { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+import {
+  mockUser,
+  mockProUser,
+  mockSubscription,
+  mockProSubscription,
+} from '../test/db';
+
 import { ConflictError } from '@plpg/shared';
 import {
   hashPassword,
@@ -16,6 +23,8 @@ import {
   toAuthUser,
   trackAuthEvent,
   registerUser,
+  loginUser,
+  verifyPassword,
   getCurrentSession,
   getSubscriptionStatus,
   getTrialEndsAt,
@@ -24,8 +33,8 @@ import {
 } from './auth.service';
 import type { AuthenticatedUser } from '../types';
 
-// Mock the prisma client
-const mockPrisma = {
+// Use vi.hoisted to define mockPrisma before vi.mock (which is hoisted)
+const mockPrisma = vi.hoisted(() => ({
   user: {
     findUnique: vi.fn(),
     create: vi.fn(),
@@ -37,11 +46,24 @@ const mockPrisma = {
     create: vi.fn(),
   },
   $transaction: vi.fn(),
-};
+}));
 
-// Mock the lib modules
+// Mock the prisma module using synchronous factory (like auth.routes.test.ts)
 vi.mock('../lib/prisma', () => ({
+  prisma: mockPrisma,
   getPrisma: () => mockPrisma,
+  disconnectPrisma: vi.fn(),
+  connectPrisma: vi.fn(),
+  PrismaClient: vi.fn(),
+}));
+
+// Also mock at the shared package level to handle re-exports
+vi.mock('@plpg/shared/prisma', () => ({
+  prisma: mockPrisma,
+  getPrisma: () => mockPrisma,
+  disconnectPrisma: vi.fn(),
+  connectPrisma: vi.fn(),
+  PrismaClient: vi.fn(),
 }));
 
 vi.mock('../lib/env', () => ({
@@ -219,19 +241,21 @@ describe('auth.service', () => {
 
     beforeEach(() => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
-      mockPrisma.$transaction.mockImplementation(async (callback) => {
-        return callback({
-          user: {
-            create: vi.fn().mockResolvedValue(mockCreatedUser),
-          },
-          subscription: {
-            create: vi.fn().mockResolvedValue({}),
-          },
-          refreshToken: {
-            create: vi.fn().mockResolvedValue(mockRefreshToken),
-          },
-        });
-      });
+      mockPrisma.$transaction.mockImplementation(
+        async (callback: (tx: unknown) => Promise<unknown>) => {
+          return callback({
+            user: {
+              create: vi.fn().mockResolvedValue(mockCreatedUser),
+            },
+            subscription: {
+              create: vi.fn().mockResolvedValue({}),
+            },
+            refreshToken: {
+              create: vi.fn().mockResolvedValue(mockRefreshToken),
+            },
+          });
+        }
+      );
     });
 
     it('should create user with hashed password', async () => {
@@ -246,8 +270,11 @@ describe('auth.service', () => {
     it('should return access and refresh tokens', async () => {
       const result = await registerUser(validInput);
 
-      expect(result.accessToken).toBe('mock-access-token');
-      expect(result.refreshToken).toBe('mock-refresh-token');
+      // registerUser generates tokens internally, so verify they're valid JWT strings
+      expect(result.accessToken).toBeDefined();
+      expect(result.accessToken).toMatch(/^eyJ/); // JWT tokens start with 'eyJ'
+      expect(result.refreshToken).toBeDefined();
+      expect(result.refreshToken).toMatch(/^eyJ/);
     });
 
     it('should throw ConflictError for duplicate email', async () => {
@@ -547,6 +574,275 @@ describe('auth.service', () => {
       const session = getCurrentSession(user);
 
       expect(session.role).toBe('admin');
+    });
+  });
+});
+
+// Note: loginUser, verifyPassword, hashPassword are already imported at the top of the file
+// The mocks are consolidated in the single vi.mock('../lib/prisma') at the top
+
+describe('Auth Service', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  describe('verifyPassword', () => {
+    it('returns true for matching password', async () => {
+      const password = 'TestPassword123!';
+      const hash = await bcrypt.hash(password, 10);
+
+      const result = await verifyPassword(password, hash);
+
+      expect(result).toBe(true);
+    });
+
+    it('returns false for non-matching password', async () => {
+      const password = 'TestPassword123!';
+      const wrongPassword = 'WrongPassword123!';
+      const hash = await bcrypt.hash(password, 10);
+
+      const result = await verifyPassword(wrongPassword, hash);
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('hashPassword', () => {
+    it('returns a valid bcrypt hash', async () => {
+      const password = 'TestPassword123!';
+
+      const hash = await hashPassword(password);
+
+      expect(hash).toMatch(/^\$2[aby]\$\d{2}\$/);
+      const isValid = await bcrypt.compare(password, hash);
+      expect(isValid).toBe(true);
+    });
+
+    it('produces different hashes for same password', async () => {
+      const password = 'TestPassword123!';
+
+      const hash1 = await hashPassword(password);
+      const hash2 = await hashPassword(password);
+
+      expect(hash1).not.toBe(hash2);
+    });
+  });
+
+  describe('loginUser', () => {
+    const validPassword = 'ValidPassword123!';
+    let validPasswordHash: string;
+
+    beforeEach(async () => {
+      validPasswordHash = await bcrypt.hash(validPassword, 10);
+    });
+
+    it('returns tokens and user data for valid credentials', async () => {
+      const userWithHash = {
+        ...mockUser,
+        passwordHash: validPasswordHash,
+        subscription: mockSubscription,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(userWithHash);
+      mockPrisma.refreshToken.create.mockResolvedValue({
+        id: 'token-id',
+        token: 'refresh-token',
+        userId: mockUser.id,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      const result = await loginUser(mockUser.email, validPassword);
+
+      expect(result).not.toBeNull();
+      expect(result?.user.id).toBe(mockUser.id);
+      expect(result?.user.email).toBe(mockUser.email);
+      expect(result?.accessToken).toBeDefined();
+      expect(result?.refreshToken).toBeDefined();
+    });
+
+    it('returns null for non-existent email', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      const result = await loginUser('nonexistent@example.com', validPassword);
+
+      expect(result).toBeNull();
+    });
+
+    it('returns null for invalid password', async () => {
+      const userWithHash = {
+        ...mockUser,
+        passwordHash: validPasswordHash,
+        subscription: mockSubscription,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(userWithHash);
+
+      const result = await loginUser(mockUser.email, 'WrongPassword123!');
+
+      expect(result).toBeNull();
+    });
+
+    it('returns pro subscription status for user with active pro subscription', async () => {
+      const proUserWithHash = {
+        ...mockProUser,
+        passwordHash: validPasswordHash,
+        subscription: mockProSubscription,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(proUserWithHash);
+      mockPrisma.refreshToken.create.mockResolvedValue({
+        id: 'token-id',
+        token: 'refresh-token',
+        userId: mockProUser.id,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      const result = await loginUser(mockProUser.email, validPassword);
+
+      expect(result?.subscriptionStatus).toBe('pro');
+    });
+
+    it('returns trial subscription status for new user within trial period', async () => {
+      const newUser = {
+        ...mockUser,
+        passwordHash: validPasswordHash,
+        createdAt: new Date(), // Just created
+        subscription: null,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(newUser);
+      mockPrisma.refreshToken.create.mockResolvedValue({
+        id: 'token-id',
+        token: 'refresh-token',
+        userId: mockUser.id,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      const result = await loginUser(mockUser.email, validPassword);
+
+      expect(result?.subscriptionStatus).toBe('trial');
+    });
+
+    it('returns free subscription status for user after trial period', async () => {
+      const oldUser = {
+        ...mockUser,
+        passwordHash: validPasswordHash,
+        createdAt: new Date('2020-01-01'), // Long ago - trial expired
+        subscription: null,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(oldUser);
+      mockPrisma.refreshToken.create.mockResolvedValue({
+        id: 'token-id',
+        token: 'refresh-token',
+        userId: mockUser.id,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      const result = await loginUser(mockUser.email, validPassword);
+
+      expect(result?.subscriptionStatus).toBe('free');
+    });
+
+    it('returns pro status for admin users regardless of subscription', async () => {
+      const adminUser = {
+        ...mockUser,
+        role: 'admin' as const,
+        passwordHash: validPasswordHash,
+        subscription: null,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(adminUser);
+      mockPrisma.refreshToken.create.mockResolvedValue({
+        id: 'token-id',
+        token: 'refresh-token',
+        userId: mockUser.id,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      const result = await loginUser(mockUser.email, validPassword);
+
+      expect(result?.subscriptionStatus).toBe('pro');
+    });
+
+    it('generates valid JWT access token with correct payload', async () => {
+      const userWithHash = {
+        ...mockUser,
+        passwordHash: validPasswordHash,
+        subscription: mockSubscription,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(userWithHash);
+      mockPrisma.refreshToken.create.mockResolvedValue({
+        id: 'token-id',
+        token: 'refresh-token',
+        userId: mockUser.id,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      const result = await loginUser(mockUser.email, validPassword);
+
+      expect(result?.accessToken).toBeDefined();
+      const decoded = jwt.decode(result!.accessToken) as {
+        userId: string;
+        email: string;
+        role: string;
+      };
+      expect(decoded.userId).toBe(mockUser.id);
+      expect(decoded.email).toBe(mockUser.email);
+      expect(decoded.role).toBe(mockUser.role);
+    });
+
+    it('stores refresh token in database', async () => {
+      const userWithHash = {
+        ...mockUser,
+        passwordHash: validPasswordHash,
+        subscription: mockSubscription,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(userWithHash);
+      mockPrisma.refreshToken.create.mockResolvedValue({
+        id: 'token-id',
+        token: 'refresh-token',
+        userId: mockUser.id,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      await loginUser(mockUser.email, validPassword);
+
+      expect(mockPrisma.refreshToken.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: mockUser.id,
+          token: expect.any(String),
+          expiresAt: expect.any(Date),
+        }),
+      });
+    });
+
+    it('normalizes email to lowercase', async () => {
+      const userWithHash = {
+        ...mockUser,
+        passwordHash: validPasswordHash,
+        subscription: mockSubscription,
+      };
+      mockPrisma.user.findUnique.mockResolvedValue(userWithHash);
+      mockPrisma.refreshToken.create.mockResolvedValue({
+        id: 'token-id',
+        token: 'refresh-token',
+        userId: mockUser.id,
+        expiresAt: new Date(),
+        createdAt: new Date(),
+      });
+
+      await loginUser('TEST@EXAMPLE.COM', validPassword);
+
+      expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'test@example.com' },
+        include: { subscription: true },
+      });
     });
   });
 });

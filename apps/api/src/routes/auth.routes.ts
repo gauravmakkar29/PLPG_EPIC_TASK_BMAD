@@ -1,52 +1,42 @@
 /**
- * @fileoverview Authentication routes module.
- * Defines HTTP routes for user authentication endpoints.
+ * @fileoverview Authentication routes for PLPG API.
+ * Defines routes for login, logout, registration, and session management.
  *
  * @module @plpg/api/routes/auth
- * @description Route definitions for authentication flows.
+ * @description Authentication endpoint routing.
  */
 
 import { Router } from 'express';
 import { registerSchema } from '@plpg/shared/validation';
-import { register, getMe } from '../controllers/auth.controller';
+import { login, register, getMe } from '../controllers/auth.controller';
 import { validate } from '../middleware/validate.middleware';
 import { jwtMiddleware, requireAuth } from '../middleware/auth.middleware';
+import { authRateLimiter } from '../middleware/rateLimiter.middleware';
 
 const router = Router();
 
 /**
- * User Registration Endpoint
+ * @route POST /api/v1/auth/login
+ * @description Authenticate user with email and password
+ * @access Public (rate limited)
  *
- * @route POST /api/v1/auth/register
- * @description Creates a new user account with hashed password and trial period.
+ * @body {string} email - User's email address
+ * @body {string} password - User's password
  *
- * @requestBody
- * - email: string (required) - Valid email address
- * - password: string (required) - Min 8 chars, uppercase, lowercase, number, special char
- * - name: string (required) - User's display name
+ * @returns {AuthResponse} User data with access and refresh tokens
  *
- * @response 201 - Successfully created user
- * {
- *   "user": AuthUser,
- *   "accessToken": string,
- *   "refreshToken": string
- * }
- *
- * @response 400 - Validation Error
- * {
- *   "error": "Validation Error",
- *   "message": "Request validation failed",
- *   "details": { ... }
- * }
- *
- * @response 409 - Conflict (email already exists)
- * {
- *   "error": "ConflictError",
- *   "message": "A user with this email already exists",
- *   "code": "CONFLICT"
- * }
+ * @throws {401} Invalid credentials
+ * @throws {429} Too many login attempts
  */
-router.post('/register', validate({ body: registerSchema }), register);
+router.post('/login', authRateLimiter, login);
+
+/**
+ * POST /api/v1/auth/register
+ * Register a new user account
+ * Public access
+ * Rate limited: 5 attempts per 15 minutes
+ */
+router.post('/register', authRateLimiter, validate({ body: registerSchema }), register);
 
 /**
  * Get Current Session Endpoint
@@ -77,3 +67,4 @@ router.post('/register', validate({ body: registerSchema }), register);
 router.get('/me', jwtMiddleware, requireAuth, getMe);
 
 export const authRoutes = router;
+export default router;

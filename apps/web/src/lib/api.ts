@@ -7,6 +7,7 @@
  */
 
 import axios, { AxiosError } from 'axios';
+
 import type { InternalAxiosRequestConfig } from 'axios';
 
 /**
@@ -109,9 +110,13 @@ api.interceptors.response.use(
             refreshToken,
           });
 
-          const { accessToken, refreshToken: newRefreshToken } = response.data;
+          const responseData = response.data as {
+            accessToken: string;
+            refreshToken: string;
+          };
+          const { accessToken } = responseData;
           setAccessToken(accessToken);
-          setRefreshToken(newRefreshToken);
+          setRefreshToken(responseData.refreshToken);
 
           // Retry the original request with new token
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -146,9 +151,10 @@ export interface ApiError {
  * Extract error message from Axios error.
  */
 export function getErrorMessage(error: unknown): string {
+  // eslint-disable-next-line import/no-named-as-default-member
   if (axios.isAxiosError(error)) {
     const apiError = error.response?.data as ApiError | undefined;
-    return apiError?.message || error.message || 'An unexpected error occurred';
+    return apiError?.message ?? error.message ?? 'An unexpected error occurred';
   }
   if (error instanceof Error) {
     return error.message;

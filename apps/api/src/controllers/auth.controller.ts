@@ -1,23 +1,71 @@
 /**
- * @fileoverview Authentication controller module.
- * Handles HTTP requests for authentication endpoints.
+ * @fileoverview Authentication controller for PLPG API.
+ * Handles login, logout, registration, and session endpoints.
  *
  * @module @plpg/api/controllers/auth
- * @description Request handlers for user authentication flows.
+ * @description HTTP handlers for authentication endpoints.
  */
 
 import type { Request, Response, NextFunction } from 'express';
 import type { RegisterInput } from '@plpg/shared/validation';
-import { AuthenticationError } from '@plpg/shared';
-import { registerUser, getCurrentSession } from '../services';
+import { AuthenticationError, loginSchema } from '@plpg/shared';
+import { loginUser, registerUser, getCurrentSession } from '../services/auth.service';
 import { logger } from '../lib/logger';
 
 /**
  * Request body type for registration endpoint.
- *
- * @typedef {Request<unknown, unknown, RegisterInput>} RegisterRequest
  */
 type RegisterRequest = Request<unknown, unknown, RegisterInput>;
+
+/**
+ * Login endpoint handler.
+ * Authenticates user with email and password.
+ *
+ * @route POST /api/v1/auth/login
+ * @param req - Express request with login credentials
+ * @param res - Express response
+ * @param next - Express next function
+ */
+export async function login(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    // Validate request body
+    const parseResult = loginSchema.safeParse(req.body);
+
+    if (!parseResult.success) {
+      const errorMessage =
+        parseResult.error.errors[0]?.message || 'Invalid request data';
+      next(new AuthenticationError(errorMessage));
+      return;
+    }
+
+    const { email, password } = parseResult.data;
+
+    // Attempt login
+    const result = await loginUser(email, password);
+
+    if (!result) {
+      // Generic error message to prevent user enumeration
+      logger.debug({ email }, 'Failed login attempt');
+      next(new AuthenticationError('Invalid email or password'));
+      return;
+    }
+
+    // Return successful login response
+    res.status(200).json({
+      user: result.user,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      subscriptionStatus: result.subscriptionStatus,
+    });
+  } catch (error) {
+    logger.error({ error }, 'Error in login controller');
+    next(error);
+  }
+}
 
 /**
  * Handles user registration requests.
@@ -32,35 +80,6 @@ type RegisterRequest = Request<unknown, unknown, RegisterInput>;
  * @returns {Promise<void>}
  *
  * @route POST /api/v1/auth/register
- *
- * @requestBody
- * {
- *   "email": "user@example.com",
- *   "password": "SecurePass123!",
- *   "name": "John Doe"
- * }
- *
- * @response 201 - Created
- * {
- *   "user": {
- *     "id": "uuid",
- *     "email": "user@example.com",
- *     "name": "John Doe",
- *     "avatarUrl": null,
- *     "role": "free",
- *     "isVerified": false,
- *     "createdAt": "2026-01-09T00:00:00.000Z"
- *   },
- *   "accessToken": "jwt.access.token",
- *   "refreshToken": "jwt.refresh.token"
- * }
- *
- * @response 400 - Validation Error
- * @response 409 - Conflict (email already exists)
- *
- * @example
- * // Express route usage
- * router.post('/register', validate({ body: registerSchema }), register);
  */
 export async function register(
   req: RegisterRequest,
@@ -96,25 +115,6 @@ export async function register(
  * @returns {Promise<void>}
  *
  * @route GET /api/v1/auth/me
- *
- * @header Authorization - Bearer token (required)
- *
- * @response 200 - Success
- * {
- *   "userId": "uuid",
- *   "email": "user@example.com",
- *   "name": "John Doe",
- *   "subscriptionStatus": "active",
- *   "trialEndsAt": "2026-01-23T00:00:00.000Z",
- *   "isVerified": false,
- *   "role": "free"
- * }
- *
- * @response 401 - Unauthorized (no token or invalid token)
- *
- * @example
- * // Express route usage
- * router.get('/me', jwtMiddleware, requireAuth, getMe);
  */
 export async function getMe(
   req: Request,

@@ -7,11 +7,13 @@
 
 import { Link } from 'react-router-dom';
 
+import type { JSX } from 'react';
+
 /**
  * Not Found page component.
  * Provides navigation back to the home page.
  */
-export function NotFound() {
+export function NotFound(): JSX.Element {
   return (
     <div className="min-h-screen bg-neutral-50 flex items-center justify-center px-4">
       <div className="text-center">
@@ -20,9 +22,9 @@ export function NotFound() {
           Page Not Found
         </h2>
         <p className="text-neutral-600 mb-8">
-          The page you're looking for doesn't exist or has been moved.
+          The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
-        <Link to="/" className="btn-primary px-6 py-3 rounded-lg">
+        <Link className="btn-primary px-6 py-3 rounded-lg" to="/">
           Back to Home
         </Link>
       </div>

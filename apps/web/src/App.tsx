@@ -10,6 +10,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
+import { SignIn } from './pages/SignIn';
 import { SignUp } from './pages/SignUp';
 
 import type { JSX } from 'react';
@@ -27,7 +28,7 @@ export function App(): JSX.Element {
       <Routes>
         <Route element={<Landing />} path="/" />
         {/* Auth routes */}
-        <Route element={<div>Sign In - Coming Soon</div>} path="/signin" />
+        <Route element={<SignIn />} path="/sign-in" />
         <Route element={<SignUp />} path="/signup" />
         <Route element={<SignUp />} path="/sign-up" />
         {/* Onboarding routes - to be implemented in Epic 2 */}
