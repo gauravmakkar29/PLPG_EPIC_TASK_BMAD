@@ -7,6 +7,7 @@
 
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { SignOutButton } from '../../components/auth';
 
 import type { JSX } from 'react';
 
@@ -65,9 +66,16 @@ export function Settings(): JSX.Element {
         <div className="max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-secondary-900">Settings</h1>
-            {user && (
-              <span className="text-sm text-secondary-600">{user.email}</span>
-            )}
+            <div className="flex items-center gap-4">
+              {user && (
+                <span className="text-sm text-secondary-600">{user.email}</span>
+              )}
+              <SignOutButton
+                variant="ghost"
+                size="small"
+                data-testid="header-sign-out-button"
+              />
+            </div>
           </div>
         </div>
       </header>
@@ -124,6 +132,27 @@ export function Settings(): JSX.Element {
             ))}
           </ul>
         </nav>
+
+        {/* Sign Out Section */}
+        <div className="mt-8 pt-6 border-t border-secondary-200">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-secondary-900">
+                  Sign Out
+                </h2>
+                <p className="text-sm text-secondary-600 mt-1">
+                  Sign out of your account on this device
+                </p>
+              </div>
+              <SignOutButton
+                variant="danger"
+                size="medium"
+                data-testid="settings-sign-out-button"
+              />
+            </div>
+          </div>
+        </div>
 
         {/* Back to Dashboard link */}
         <div className="mt-8 text-center">
