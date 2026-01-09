@@ -7,7 +7,7 @@
  */
 
 import { Router } from 'express';
-import { login } from '../controllers/auth.controller';
+import { login, register } from '../controllers/auth.controller';
 import { authRateLimiter } from '../middleware/rateLimiter.middleware';
 
 const router = Router();
@@ -26,5 +26,6 @@ const router = Router();
  * @throws {429} Too many login attempts
  */
 router.post('/login', authRateLimiter, login);
+router.post('/register', authRateLimiter, register);
 
 export const authRoutes = router;

@@ -22,4 +22,9 @@ router.use('/auth', authRoutes);
 // router.use('/roadmap', roadmapRoutes);
 // router.use('/progress', progressRoutes);
 
+// Future route modules will be added here:
+// router.use('/onboarding', onboardingRoutes);
+// router.use('/roadmap', roadmapRoutes);
+// router.use('/progress', progressRoutes);
+
 export const routes = router;
