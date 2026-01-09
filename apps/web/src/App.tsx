@@ -10,6 +10,7 @@ import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
+import { SignUp } from './pages/SignUp';
 
 import type { JSX } from 'react';
 
@@ -25,9 +26,10 @@ export function App(): JSX.Element {
     <AuthProvider>
       <Routes>
         <Route element={<Landing />} path="/" />
-        {/* Auth routes - to be implemented in Epic 1 */}
+        {/* Auth routes */}
         <Route element={<div>Sign In - Coming Soon</div>} path="/signin" />
-        <Route element={<div>Sign Up - Coming Soon</div>} path="/signup" />
+        <Route element={<SignUp />} path="/signup" />
+        <Route element={<SignUp />} path="/sign-up" />
         {/* Onboarding routes - to be implemented in Epic 2 */}
         <Route
           element={<div>Onboarding - Coming Soon</div>}

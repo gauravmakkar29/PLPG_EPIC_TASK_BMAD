@@ -70,7 +70,7 @@ export const handlers = [
   http.post(`${API_BASE}/auth/register`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
 
-    if (!body.email || !body.password || !body.name) {
+    if (!body['email'] || !body['password'] || !body['name']) {
       return HttpResponse.json(
         {
           error: {
@@ -90,7 +90,7 @@ export const handlers = [
   http.post(`${API_BASE}/auth/login`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
 
-    if (body.email === 'invalid@example.com') {
+    if (body['email'] === 'invalid@example.com') {
       return HttpResponse.json(
         {
           error: {
@@ -138,7 +138,7 @@ export const handlers = [
   http.post(`${API_BASE}/auth/refresh`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
 
-    if (!body.refreshToken) {
+    if (!body['refreshToken']) {
       return HttpResponse.json(
         {
           error: {
@@ -169,7 +169,7 @@ export const handlers = [
   http.post(`${API_BASE}/auth/reset-password`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
 
-    if (!body.token || !body.password) {
+    if (!body['token'] || !body['password']) {
       return HttpResponse.json(
         {
           error: {

@@ -164,7 +164,10 @@ function customRender(
   const entries = initialEntries ?? [initialRoute];
 
   const Wrapper = ({ children }: { children: ReactNode }) => (
-    <AllProviders queryClient={queryClient} routerProps={{ initialEntries: entries }}>
+    <AllProviders
+      {...(queryClient !== undefined && { queryClient })}
+      routerProps={{ initialEntries: entries }}
+    >
       {children}
     </AllProviders>
   );
