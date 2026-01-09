@@ -159,7 +159,9 @@ export const mockProUserWithSubscription = {
  * @param {Partial<Request>} [overrides] - Properties to override
  * @returns {Request} Mock Express request object
  */
-export function createMockRequest(overrides: Record<string, unknown> = {}) {
+export function createMockRequest(
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
   return {
     headers: {} as Record<string, string>,
     params: {} as Record<string, string>,
@@ -176,7 +178,7 @@ export function createMockRequest(overrides: Record<string, unknown> = {}) {
  * @function createMockResponse
  * @returns {Response} Mock Express response object with spies
  */
-export function createMockResponse() {
+export function createMockResponse(): Record<string, ReturnType<typeof vi.fn>> {
   const res = {
     status: vi.fn().mockReturnThis(),
     json: vi.fn().mockReturnThis(),
@@ -193,6 +195,6 @@ export function createMockResponse() {
  * @function createMockNext
  * @returns {NextFunction} Mock Express next function
  */
-export function createMockNext() {
+export function createMockNext(): ReturnType<typeof vi.fn> {
   return vi.fn();
 }

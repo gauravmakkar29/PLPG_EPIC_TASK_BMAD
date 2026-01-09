@@ -5,4 +5,4 @@
  */
 
 export { healthCheck, detailedHealthCheck } from './health.controller';
-export { login } from './auth.controller';
+export { login, register } from './auth.controller';

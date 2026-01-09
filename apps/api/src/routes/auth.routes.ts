@@ -26,6 +26,14 @@ const router = Router();
  * @throws {429} Too many login attempts
  */
 router.post('/login', authRateLimiter, login);
+
+/**
+ * POST /api/v1/auth/register
+ * Register a new user account
+ * Public access
+ * Rate limited: 5 attempts per 15 minutes
+ */
 router.post('/register', authRateLimiter, register);
 
 export const authRoutes = router;
+export default router;

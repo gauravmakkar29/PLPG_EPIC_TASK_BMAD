@@ -1,0 +1,4 @@
+# ESLint configuration files (CommonJS format)
+eslint/*.js
+tailwind/*.js
+*.js

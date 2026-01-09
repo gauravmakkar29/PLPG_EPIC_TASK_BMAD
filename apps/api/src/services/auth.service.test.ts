@@ -26,12 +26,6 @@ import {
   BCRYPT_COST_FACTOR,
   AUTH_EVENTS,
 } from './auth.service';
-/**
- * @fileoverview Unit tests for authentication service.
- * Tests user registration, password hashing, and token generation.
- *
- * @module @plpg/api/services/auth.service.test
- */
 
 // Mock the prisma client
 const mockPrisma = {

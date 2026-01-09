@@ -118,7 +118,7 @@ export const handlers = [
   http.get(`${API_BASE}/auth/me`, ({ request }) => {
     const authHeader = request.headers.get('Authorization');
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader?.startsWith('Bearer ')) {
       return HttpResponse.json(
         {
           error: {
@@ -161,7 +161,8 @@ export const handlers = [
   http.post(`${API_BASE}/auth/forgot-password`, () => {
     return HttpResponse.json({
       success: true,
-      message: 'If an account exists with this email, a password reset link has been sent',
+      message:
+        'If an account exists with this email, a password reset link has been sent',
     });
   }),
 

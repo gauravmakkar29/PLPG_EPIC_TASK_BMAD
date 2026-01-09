@@ -26,7 +26,10 @@ import {
 } from '@plpg/shared';
 import { prisma } from '../lib/prisma';
 import { logger } from '../lib/logger';
-import type { AuthenticatedUser, AuthenticatedUserSubscription } from '../types';
+import type {
+  AuthenticatedUser,
+  AuthenticatedUserSubscription,
+} from '../types';
 
 /**
  * JWT secret for token verification.
@@ -35,7 +38,8 @@ import type { AuthenticatedUser, AuthenticatedUserSubscription } from '../types'
  * @constant JWT_SECRET
  * @private
  */
-const JWT_SECRET = process.env['JWT_SECRET'] || 'development-secret-change-in-production';
+const JWT_SECRET =
+  process.env['JWT_SECRET'] || 'development-secret-change-in-production';
 
 /**
  * Extracts Bearer token from Authorization header.
@@ -51,7 +55,7 @@ const JWT_SECRET = process.env['JWT_SECRET'] || 'development-secret-change-in-pr
  * extractBearerToken(undefined) // null
  */
 function extractBearerToken(authHeader: string | undefined): string | null {
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader?.startsWith('Bearer ')) {
     return null;
   }
   return authHeader.slice(7);
@@ -91,7 +95,9 @@ function verifyToken(token: string): AuthTokenPayload | null {
  * const user = await fetchUserWithSubscription('uuid-123');
  * // { id: 'uuid-123', email: 'user@example.com', role: 'free', ... }
  */
-async function fetchUserWithSubscription(userId: string): Promise<AuthenticatedUser | null> {
+async function fetchUserWithSubscription(
+  userId: string
+): Promise<AuthenticatedUser | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { subscription: true },
@@ -133,7 +139,9 @@ async function fetchUserWithSubscription(userId: string): Promise<AuthenticatedU
  * - Users with admin role get 'pro' status
  * - All other users get 'free' status
  */
-function getEffectiveSubscriptionStatus(user: AuthenticatedUser): 'free' | 'pro' {
+function getEffectiveSubscriptionStatus(
+  user: AuthenticatedUser
+): 'free' | 'pro' {
   // Admins always have pro access
   if (user.role === 'admin') {
     return 'pro';
@@ -214,7 +222,10 @@ export async function jwtMiddleware(
 
     if (!user) {
       // User not found - continue without user
-      logger.debug({ userId: payload.userId }, 'User from JWT not found in database');
+      logger.debug(
+        { userId: payload.userId },
+        'User from JWT not found in database'
+      );
       next();
       return;
     }
@@ -248,7 +259,11 @@ export async function jwtMiddleware(
  * @example
  * router.get('/profile', jwtMiddleware, requireAuth, profileController);
  */
-export function requireAuth(req: Request, _res: Response, next: NextFunction): void {
+export function requireAuth(
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void {
   if (!req.user) {
     next(new AuthenticationError('Authentication required'));
     return;
@@ -280,7 +295,11 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
  * @example
  * router.get('/analytics', jwtMiddleware, requireAuth, requirePro, analyticsController);
  */
-export function requirePro(req: Request, _res: Response, next: NextFunction): void {
+export function requirePro(
+  req: Request,
+  _res: Response,
+  next: NextFunction
+): void {
   const user = req.user;
 
   if (!user) {
@@ -366,7 +385,11 @@ export function requirePhaseAccess(phaseNumber: number): RequestHandler {
 
     if (status !== 'pro') {
       const phaseName = PHASE_ORDER[phaseNumber - 1];
-      next(new ForbiddenError(`Pro subscription required to access ${phaseName} phase content`));
+      next(
+        new ForbiddenError(
+          `Pro subscription required to access ${phaseName} phase content`
+        )
+      );
       return;
     }
 
@@ -392,7 +415,9 @@ export function requirePhaseAccess(phaseNumber: number): RequestHandler {
  * router.get('/phases/:name/content', requirePhaseAccessByName('core_ml'), controller);
  */
 export function requirePhaseAccessByName(phaseName: string): RequestHandler {
-  const phaseIndex = PHASE_ORDER.indexOf(phaseName as typeof PHASE_ORDER[number]);
+  const phaseIndex = PHASE_ORDER.indexOf(
+    phaseName as (typeof PHASE_ORDER)[number]
+  );
 
   if (phaseIndex === -1) {
     // Return middleware that always fails for invalid phase
