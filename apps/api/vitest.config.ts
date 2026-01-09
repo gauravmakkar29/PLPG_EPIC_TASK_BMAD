@@ -14,6 +14,16 @@ export default defineConfig({
     // Test environment
     environment: 'node',
 
+    // Set environment variables BEFORE modules are loaded
+    env: {
+      NODE_ENV: 'test',
+      JWT_SECRET: 'test-jwt-secret-at-least-32-characters-long',
+      JWT_REFRESH_SECRET: 'test-jwt-refresh-secret-at-least-32-characters-long',
+      BCRYPT_ROUNDS: '4',
+      TRIAL_DURATION_DAYS: '14',
+      LOG_LEVEL: 'silent',
+    },
+
     // Global test setup
     setupFiles: ['./src/test/setup.ts'],
 

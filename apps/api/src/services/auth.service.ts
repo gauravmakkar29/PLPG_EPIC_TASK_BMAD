@@ -9,8 +9,9 @@
 import bcrypt from 'bcrypt';
 import crypto from 'node:crypto';
 import type { RegisterInput } from '@plpg/shared/validation';
-import type { AuthResponse, AuthUser } from '@plpg/shared';
-import { ConflictError } from '@plpg/shared';
+import type { AuthResponse, AuthUser, SubscriptionStatus } from '@plpg/shared';
+import { ConflictError, NotFoundError } from '@plpg/shared';
+import type { AuthenticatedUser } from '../types';
 import { getPrisma } from '../lib/prisma';
 import {
   generateAccessToken,
@@ -249,5 +250,147 @@ export async function registerUser(input: RegisterInput): Promise<RegisterResult
     user: toAuthUser(user),
     accessToken,
     refreshToken,
+  };
+}
+
+/**
+ * Session response containing user data and subscription status.
+ *
+ * @interface SessionResponse
+ * @description Response format for GET /auth/me endpoint.
+ *
+ * @property {string} userId - User's unique identifier
+ * @property {string} email - User's email address
+ * @property {string | null} name - User's display name
+ * @property {SubscriptionStatus} subscriptionStatus - Current subscription status
+ * @property {Date | null} trialEndsAt - Trial end date (null if not on trial)
+ * @property {boolean} isVerified - Email verification status
+ * @property {string} role - User's role (free/pro/admin)
+ */
+export interface SessionResponse {
+  userId: string;
+  email: string;
+  name: string | null;
+  subscriptionStatus: SubscriptionStatus;
+  trialEndsAt: Date | null;
+  isVerified: boolean;
+  role: 'free' | 'pro' | 'admin';
+}
+
+/**
+ * Determines subscription status based on user's subscription data.
+ *
+ * @function getSubscriptionStatus
+ * @param {AuthenticatedUser} user - Authenticated user with subscription
+ * @returns {SubscriptionStatus} Current subscription status
+ *
+ * @description
+ * Returns the subscription status:
+ * - 'active': Has valid active subscription
+ * - 'expired': Subscription has expired
+ * - 'cancelled': Subscription was cancelled
+ * - 'active': Default for free users without subscription record
+ */
+export function getSubscriptionStatus(user: AuthenticatedUser): SubscriptionStatus {
+  if (!user.subscription) {
+    return 'active'; // Default for free users
+  }
+  return user.subscription.status;
+}
+
+/**
+ * Gets trial end date from user's subscription.
+ *
+ * @function getTrialEndsAt
+ * @param {AuthenticatedUser} user - Authenticated user with subscription
+ * @returns {Date | null} Trial end date or null if not on trial/no subscription
+ *
+ * @description
+ * Returns the trial end date for users on a free plan with an expiration date.
+ * Returns null for:
+ * - Users without subscription
+ * - Pro users (they don't have a trial)
+ * - Users whose trial has already ended
+ */
+export function getTrialEndsAt(user: AuthenticatedUser): Date | null {
+  if (!user.subscription) {
+    return null;
+  }
+
+  // Only free plan users have trial end dates
+  if (user.subscription.plan !== 'free') {
+    return null;
+  }
+
+  return user.subscription.expiresAt;
+}
+
+/**
+ * Gets the current user session information.
+ *
+ * @function getCurrentSession
+ * @param {AuthenticatedUser} user - Authenticated user from request
+ * @returns {SessionResponse} Current session data
+ *
+ * @description
+ * Transforms the authenticated user into a session response containing:
+ * - User identification (userId, email, name)
+ * - Subscription status
+ * - Trial information
+ * - Email verification status
+ *
+ * @example
+ * const session = getCurrentSession(req.user);
+ * // Returns: { userId, email, name, subscriptionStatus, trialEndsAt, isVerified, role }
+ */
+export function getCurrentSession(user: AuthenticatedUser): SessionResponse {
+  return {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    subscriptionStatus: getSubscriptionStatus(user),
+    trialEndsAt: getTrialEndsAt(user),
+    isVerified: user.emailVerified,
+    role: user.role,
+  };
+}
+
+/**
+ * Fetches a user by ID with subscription data.
+ *
+ * @function getUserById
+ * @async
+ * @param {string} userId - User's unique identifier
+ * @returns {Promise<AuthenticatedUser>} User with subscription data
+ * @throws {NotFoundError} If user is not found
+ *
+ * @example
+ * const user = await getUserById('uuid-123');
+ */
+export async function getUserById(userId: string): Promise<AuthenticatedUser> {
+  const prisma = getPrisma();
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { subscription: true },
+  });
+
+  if (!user) {
+    throw new NotFoundError('User');
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    name: user.name,
+    emailVerified: user.emailVerified,
+    subscription: user.subscription
+      ? {
+          plan: user.subscription.plan as 'free' | 'pro',
+          status: user.subscription.status,
+          expiresAt: user.subscription.expiresAt,
+        }
+      : null,
   };
 }

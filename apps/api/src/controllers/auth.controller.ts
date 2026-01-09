@@ -8,7 +8,8 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import type { RegisterInput } from '@plpg/shared/validation';
-import { registerUser } from '../services';
+import { AuthenticationError } from '@plpg/shared';
+import { registerUser, getCurrentSession } from '../services';
 import { logger } from '../lib/logger';
 
 /**
@@ -77,6 +78,62 @@ export async function register(
     );
 
     res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Gets the current authenticated user's session information.
+ *
+ * Returns user data including subscription status and trial information.
+ * Requires authentication via JWT token.
+ *
+ * @function getMe
+ * @param {Request} req - Express request with authenticated user
+ * @param {Response} res - Express response object
+ * @param {NextFunction} next - Express next function for error handling
+ * @returns {Promise<void>}
+ *
+ * @route GET /api/v1/auth/me
+ *
+ * @header Authorization - Bearer token (required)
+ *
+ * @response 200 - Success
+ * {
+ *   "userId": "uuid",
+ *   "email": "user@example.com",
+ *   "name": "John Doe",
+ *   "subscriptionStatus": "active",
+ *   "trialEndsAt": "2026-01-23T00:00:00.000Z",
+ *   "isVerified": false,
+ *   "role": "free"
+ * }
+ *
+ * @response 401 - Unauthorized (no token or invalid token)
+ *
+ * @example
+ * // Express route usage
+ * router.get('/me', jwtMiddleware, requireAuth, getMe);
+ */
+export async function getMe(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    // User should be set by jwtMiddleware + requireAuth
+    if (!req.user) {
+      throw new AuthenticationError('Authentication required');
+    }
+
+    logger.debug({ userId: req.user.id }, 'Getting current session');
+
+    const session = getCurrentSession(req.user);
+
+    logger.debug({ userId: session.userId }, 'Session retrieved successfully');
+
+    res.status(200).json(session);
   } catch (error) {
     next(error);
   }

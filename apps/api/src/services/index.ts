@@ -12,7 +12,12 @@ export {
   calculateTrialEndDate,
   toAuthUser,
   trackAuthEvent,
+  getCurrentSession,
+  getSubscriptionStatus,
+  getTrialEndsAt,
+  getUserById,
   AUTH_EVENTS,
   BCRYPT_COST_FACTOR,
   type RegisterResult,
+  type SessionResponse,
 } from './auth.service';

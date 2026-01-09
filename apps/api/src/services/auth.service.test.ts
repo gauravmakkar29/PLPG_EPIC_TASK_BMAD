@@ -16,9 +16,13 @@ import {
   toAuthUser,
   trackAuthEvent,
   registerUser,
+  getCurrentSession,
+  getSubscriptionStatus,
+  getTrialEndsAt,
   BCRYPT_COST_FACTOR,
   AUTH_EVENTS,
 } from './auth.service';
+import type { AuthenticatedUser } from '../types';
 
 // Mock the prisma client
 const mockPrisma = {
@@ -316,6 +320,233 @@ describe('auth.service', () => {
   describe('AUTH_EVENTS', () => {
     it('should have signup_completed event', () => {
       expect(AUTH_EVENTS.SIGNUP_COMPLETED).toBe('signup_completed');
+    });
+  });
+
+  describe('getSubscriptionStatus', () => {
+    it('should return active for user without subscription', () => {
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'free',
+        name: 'Test User',
+        emailVerified: false,
+        subscription: null,
+      };
+
+      const status = getSubscriptionStatus(user);
+
+      expect(status).toBe('active');
+    });
+
+    it('should return subscription status when present', () => {
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'free',
+        name: 'Test User',
+        emailVerified: false,
+        subscription: {
+          plan: 'free',
+          status: 'active',
+          expiresAt: new Date('2026-01-23'),
+        },
+      };
+
+      const status = getSubscriptionStatus(user);
+
+      expect(status).toBe('active');
+    });
+
+    it('should return expired when subscription is expired', () => {
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'free',
+        name: 'Test User',
+        emailVerified: false,
+        subscription: {
+          plan: 'free',
+          status: 'expired',
+          expiresAt: new Date('2025-12-01'),
+        },
+      };
+
+      const status = getSubscriptionStatus(user);
+
+      expect(status).toBe('expired');
+    });
+
+    it('should return cancelled when subscription is cancelled', () => {
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'pro',
+        name: 'Test User',
+        emailVerified: true,
+        subscription: {
+          plan: 'pro',
+          status: 'cancelled',
+          expiresAt: null,
+        },
+      };
+
+      const status = getSubscriptionStatus(user);
+
+      expect(status).toBe('cancelled');
+    });
+  });
+
+  describe('getTrialEndsAt', () => {
+    it('should return null for user without subscription', () => {
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'free',
+        name: 'Test User',
+        emailVerified: false,
+        subscription: null,
+      };
+
+      const trialEndsAt = getTrialEndsAt(user);
+
+      expect(trialEndsAt).toBeNull();
+    });
+
+    it('should return expiresAt for free plan users', () => {
+      const expectedDate = new Date('2026-01-23');
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'free',
+        name: 'Test User',
+        emailVerified: false,
+        subscription: {
+          plan: 'free',
+          status: 'active',
+          expiresAt: expectedDate,
+        },
+      };
+
+      const trialEndsAt = getTrialEndsAt(user);
+
+      expect(trialEndsAt).toEqual(expectedDate);
+    });
+
+    it('should return null for pro plan users', () => {
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'pro',
+        name: 'Test User',
+        emailVerified: true,
+        subscription: {
+          plan: 'pro',
+          status: 'active',
+          expiresAt: new Date('2027-01-01'),
+        },
+      };
+
+      const trialEndsAt = getTrialEndsAt(user);
+
+      expect(trialEndsAt).toBeNull();
+    });
+  });
+
+  describe('getCurrentSession', () => {
+    it('should return session data with all required fields', () => {
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'free',
+        name: 'Test User',
+        emailVerified: false,
+        subscription: {
+          plan: 'free',
+          status: 'active',
+          expiresAt: new Date('2026-01-23'),
+        },
+      };
+
+      const session = getCurrentSession(user);
+
+      expect(session).toHaveProperty('userId', 'user-123');
+      expect(session).toHaveProperty('email', 'test@example.com');
+      expect(session).toHaveProperty('name', 'Test User');
+      expect(session).toHaveProperty('subscriptionStatus', 'active');
+      expect(session).toHaveProperty('trialEndsAt');
+      expect(session).toHaveProperty('isVerified', false);
+      expect(session).toHaveProperty('role', 'free');
+    });
+
+    it('should return correct subscriptionStatus', () => {
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'free',
+        name: null,
+        emailVerified: false,
+        subscription: {
+          plan: 'free',
+          status: 'expired',
+          expiresAt: new Date('2025-12-01'),
+        },
+      };
+
+      const session = getCurrentSession(user);
+
+      expect(session.subscriptionStatus).toBe('expired');
+    });
+
+    it('should return null trialEndsAt for non-trial users', () => {
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'pro',
+        name: 'Pro User',
+        emailVerified: true,
+        subscription: {
+          plan: 'pro',
+          status: 'active',
+          expiresAt: null,
+        },
+      };
+
+      const session = getCurrentSession(user);
+
+      expect(session.trialEndsAt).toBeNull();
+    });
+
+    it('should handle user without subscription', () => {
+      const user: AuthenticatedUser = {
+        id: 'user-123',
+        email: 'test@example.com',
+        role: 'free',
+        name: 'New User',
+        emailVerified: false,
+        subscription: null,
+      };
+
+      const session = getCurrentSession(user);
+
+      expect(session.userId).toBe('user-123');
+      expect(session.subscriptionStatus).toBe('active');
+      expect(session.trialEndsAt).toBeNull();
+    });
+
+    it('should return correct role for admin users', () => {
+      const user: AuthenticatedUser = {
+        id: 'admin-123',
+        email: 'admin@example.com',
+        role: 'admin',
+        name: 'Admin User',
+        emailVerified: true,
+        subscription: null,
+      };
+
+      const session = getCurrentSession(user);
+
+      expect(session.role).toBe('admin');
     });
   });
 });

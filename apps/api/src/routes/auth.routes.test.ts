@@ -10,8 +10,14 @@ import request from 'supertest';
 import express from 'express';
 import { authRoutes } from './auth.routes';
 
-// Mock the prisma client
-const mockPrisma = {
+// JWT secret for tests - must match process.env.JWT_SECRET
+const TEST_JWT_SECRET = 'test-jwt-secret-at-least-32-characters-long';
+
+// Set environment variable for auth middleware which reads directly from process.env
+process.env['JWT_SECRET'] = TEST_JWT_SECRET;
+
+// Use vi.hoisted to define mockPrisma before vi.mock (which is hoisted)
+const mockPrisma = vi.hoisted(() => ({
   user: {
     findUnique: vi.fn(),
     create: vi.fn(),
@@ -23,11 +29,12 @@ const mockPrisma = {
     create: vi.fn(),
   },
   $transaction: vi.fn(),
-};
+}));
 
 // Mock modules before importing
 vi.mock('../lib/prisma', () => ({
   getPrisma: () => mockPrisma,
+  prisma: mockPrisma,
 }));
 
 vi.mock('../lib/env', () => ({
@@ -42,11 +49,31 @@ vi.mock('../lib/env', () => ({
   getTrialDurationDays: () => 14,
 }));
 
-vi.mock('../lib/jwt', () => ({
-  generateAccessToken: vi.fn(() => 'mock-access-token'),
-  generateRefreshToken: vi.fn(() => 'mock-refresh-token'),
-  REFRESH_TOKEN_EXPIRY_MS: 7 * 24 * 60 * 60 * 1000,
-}));
+vi.mock('../lib/jwt', async () => {
+  const jwt = await import('jsonwebtoken');
+  const { AuthenticationError } = await import('@plpg/shared');
+  const secret = 'test-jwt-secret-at-least-32-characters-long';
+
+  return {
+    generateAccessToken: vi.fn(() => 'mock-access-token'),
+    generateRefreshToken: vi.fn(() => 'mock-refresh-token'),
+    REFRESH_TOKEN_EXPIRY_MS: 7 * 24 * 60 * 60 * 1000,
+    verifyAccessToken: (token: string) => {
+      try {
+        const decoded = jwt.default.verify(token, secret, {
+          issuer: 'plpg-api',
+          audience: 'plpg-client',
+        });
+        return decoded;
+      } catch (error) {
+        if (error instanceof jwt.default.TokenExpiredError) {
+          throw new AuthenticationError('Token has expired');
+        }
+        throw new AuthenticationError('Invalid token');
+      }
+    },
+  };
+});
 
 // Create test app
 function createTestApp() {
@@ -301,5 +328,212 @@ describe('POST /auth/register', () => {
       .expect(201);
 
     expect(response.headers['content-type']).toMatch(/application\/json/);
+  });
+});
+
+describe('GET /auth/me', () => {
+  let app: express.Application;
+
+  const mockUserWithSubscription = {
+    id: 'user-123',
+    email: 'test@example.com',
+    name: 'Test User',
+    role: 'free' as const,
+    emailVerified: false,
+    subscription: {
+      id: 'sub-123',
+      userId: 'user-123',
+      plan: 'free',
+      status: 'active' as const,
+      expiresAt: new Date('2026-01-23'),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    app = createTestApp();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('should return 401 without auth token', async () => {
+    const response = await request(app)
+      .get('/auth/me')
+      .expect(401);
+
+    expect(response.body.error).toBe('AuthenticationError');
+    expect(response.body.message).toBe('Authentication required');
+  });
+
+  it('should return 401 with invalid token', async () => {
+    const response = await request(app)
+      .get('/auth/me')
+      .set('Authorization', 'Bearer invalid-token')
+      .expect(401);
+
+    expect(response.body.error).toBe('AuthenticationError');
+  });
+
+  it('should return 401 with malformed authorization header', async () => {
+    const response = await request(app)
+      .get('/auth/me')
+      .set('Authorization', 'NotBearer token')
+      .expect(401);
+
+    expect(response.body.error).toBe('AuthenticationError');
+  });
+
+  it('should return user data with valid token', async () => {
+    // Mock prisma to return user with subscription
+    mockPrisma.user.findUnique.mockResolvedValue(mockUserWithSubscription);
+
+    // We need to create a valid JWT token for testing
+    // Import jwt to sign a test token
+    const jwt = await import('jsonwebtoken');
+    const validToken = jwt.default.sign(
+      { userId: 'user-123', email: 'test@example.com', role: 'free' },
+      TEST_JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    const response = await request(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${validToken}`)
+      .expect(200);
+
+    expect(response.body).toHaveProperty('userId', 'user-123');
+    expect(response.body).toHaveProperty('email', 'test@example.com');
+    expect(response.body).toHaveProperty('name', 'Test User');
+    expect(response.body).toHaveProperty('subscriptionStatus');
+    expect(response.body).toHaveProperty('isVerified');
+    expect(response.body).toHaveProperty('role');
+  });
+
+  it('should return all required fields in response', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(mockUserWithSubscription);
+
+    const jwt = await import('jsonwebtoken');
+    const validToken = jwt.default.sign(
+      { userId: 'user-123', email: 'test@example.com', role: 'free' },
+      TEST_JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    const response = await request(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${validToken}`)
+      .expect(200);
+
+    // Verify all required fields are present
+    expect(response.body).toHaveProperty('userId');
+    expect(response.body).toHaveProperty('email');
+    expect(response.body).toHaveProperty('name');
+    expect(response.body).toHaveProperty('subscriptionStatus');
+    expect(response.body).toHaveProperty('trialEndsAt');
+    expect(response.body).toHaveProperty('isVerified');
+    expect(response.body).toHaveProperty('role');
+  });
+
+  it('should return correct subscriptionStatus', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(mockUserWithSubscription);
+
+    const jwt = await import('jsonwebtoken');
+    const validToken = jwt.default.sign(
+      { userId: 'user-123', email: 'test@example.com', role: 'free' },
+      TEST_JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    const response = await request(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${validToken}`)
+      .expect(200);
+
+    expect(response.body.subscriptionStatus).toBe('active');
+  });
+
+  it('should return trialEndsAt for free users on trial', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(mockUserWithSubscription);
+
+    const jwt = await import('jsonwebtoken');
+    const validToken = jwt.default.sign(
+      { userId: 'user-123', email: 'test@example.com', role: 'free' },
+      TEST_JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    const response = await request(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${validToken}`)
+      .expect(200);
+
+    expect(response.body.trialEndsAt).not.toBeNull();
+  });
+
+  it('should return null trialEndsAt for non-trial users', async () => {
+    const proUser = {
+      ...mockUserWithSubscription,
+      role: 'pro' as const,
+      subscription: {
+        ...mockUserWithSubscription.subscription,
+        plan: 'pro',
+        expiresAt: null,
+      },
+    };
+    mockPrisma.user.findUnique.mockResolvedValue(proUser);
+
+    const jwt = await import('jsonwebtoken');
+    const validToken = jwt.default.sign(
+      { userId: 'user-123', email: 'test@example.com', role: 'pro' },
+      TEST_JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    const response = await request(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${validToken}`)
+      .expect(200);
+
+    expect(response.body.trialEndsAt).toBeNull();
+  });
+
+  it('should return 401 with expired token', async () => {
+    const jwt = await import('jsonwebtoken');
+    // Create an expired token
+    const expiredToken = jwt.default.sign(
+      { userId: 'user-123', email: 'test@example.com', role: 'free' },
+      TEST_JWT_SECRET,
+      { expiresIn: '-1s' }
+    );
+
+    const response = await request(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${expiredToken}`)
+      .expect(401);
+
+    expect(response.body.error).toBe('AuthenticationError');
+  });
+
+  it('should return 401 when user not found in database', async () => {
+    // User exists in JWT but not in database
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+
+    const jwt = await import('jsonwebtoken');
+    const validToken = jwt.default.sign(
+      { userId: 'non-existent-user', email: 'test@example.com', role: 'free' },
+      TEST_JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    const response = await request(app)
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${validToken}`)
+      .expect(401);
+
+    expect(response.body.error).toBe('AuthenticationError');
   });
 });

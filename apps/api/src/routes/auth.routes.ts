@@ -8,8 +8,9 @@
 
 import { Router } from 'express';
 import { registerSchema } from '@plpg/shared/validation';
-import { register } from '../controllers/auth.controller';
+import { register, getMe } from '../controllers/auth.controller';
 import { validate } from '../middleware/validate.middleware';
+import { jwtMiddleware, requireAuth } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -46,5 +47,33 @@ const router = Router();
  * }
  */
 router.post('/register', validate({ body: registerSchema }), register);
+
+/**
+ * Get Current Session Endpoint
+ *
+ * @route GET /api/v1/auth/me
+ * @description Returns the current authenticated user's session information.
+ *
+ * @header Authorization - Bearer token (required)
+ *
+ * @response 200 - Success
+ * {
+ *   "userId": string,
+ *   "email": string,
+ *   "name": string | null,
+ *   "subscriptionStatus": "active" | "expired" | "cancelled",
+ *   "trialEndsAt": string | null,
+ *   "isVerified": boolean,
+ *   "role": "free" | "pro" | "admin"
+ * }
+ *
+ * @response 401 - Unauthorized
+ * {
+ *   "error": "AuthenticationError",
+ *   "message": "Authentication required",
+ *   "code": "UNAUTHORIZED"
+ * }
+ */
+router.get('/me', jwtMiddleware, requireAuth, getMe);
 
 export const authRoutes = router;
