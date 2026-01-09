@@ -34,7 +34,9 @@ export interface AuthenticatedUserSubscription {
  * @property {string} email - User's email address
  * @property {UserRole} role - User's access role (free/pro/admin)
  * @property {string | null} name - User's display name
+ * @property {string | null} avatarUrl - User's profile picture URL
  * @property {boolean} emailVerified - Whether user's email is verified
+ * @property {Date} createdAt - When the user account was created
  * @property {AuthenticatedUserSubscription | null} subscription - User's subscription info
  */
 export interface AuthenticatedUser {
@@ -42,7 +44,9 @@ export interface AuthenticatedUser {
   email: string;
   role: UserRole;
   name: string | null;
+  avatarUrl: string | null;
   emailVerified: boolean;
+  createdAt: Date;
   subscription: AuthenticatedUserSubscription | null;
 }
 

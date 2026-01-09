@@ -357,7 +357,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'free',
         name: 'Test User',
+        avatarUrl: null,
         emailVerified: false,
+        createdAt: new Date('2026-01-01'),
         subscription: null,
       };
 
@@ -372,7 +374,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'free',
         name: 'Test User',
+        avatarUrl: null,
         emailVerified: false,
+        createdAt: new Date('2026-01-01'),
         subscription: {
           plan: 'free',
           status: 'active',
@@ -391,7 +395,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'free',
         name: 'Test User',
+        avatarUrl: null,
         emailVerified: false,
+        createdAt: new Date('2026-01-01'),
         subscription: {
           plan: 'free',
           status: 'expired',
@@ -410,7 +416,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'pro',
         name: 'Test User',
+        avatarUrl: null,
         emailVerified: true,
+        createdAt: new Date('2026-01-01'),
         subscription: {
           plan: 'pro',
           status: 'cancelled',
@@ -431,7 +439,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'free',
         name: 'Test User',
+        avatarUrl: null,
         emailVerified: false,
+        createdAt: new Date('2026-01-01'),
         subscription: null,
       };
 
@@ -447,7 +457,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'free',
         name: 'Test User',
+        avatarUrl: null,
         emailVerified: false,
+        createdAt: new Date('2026-01-01'),
         subscription: {
           plan: 'free',
           status: 'active',
@@ -466,7 +478,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'pro',
         name: 'Test User',
+        avatarUrl: null,
         emailVerified: true,
+        createdAt: new Date('2026-01-01'),
         subscription: {
           plan: 'pro',
           status: 'active',
@@ -487,7 +501,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'free',
         name: 'Test User',
+        avatarUrl: null,
         emailVerified: false,
+        createdAt: new Date('2026-01-01'),
         subscription: {
           plan: 'free',
           status: 'active',
@@ -512,7 +528,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'free',
         name: null,
+        avatarUrl: null,
         emailVerified: false,
+        createdAt: new Date('2026-01-01'),
         subscription: {
           plan: 'free',
           status: 'expired',
@@ -531,7 +549,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'pro',
         name: 'Pro User',
+        avatarUrl: null,
         emailVerified: true,
+        createdAt: new Date('2026-01-01'),
         subscription: {
           plan: 'pro',
           status: 'active',
@@ -550,7 +570,9 @@ describe('auth.service', () => {
         email: 'test@example.com',
         role: 'free',
         name: 'New User',
+        avatarUrl: null,
         emailVerified: false,
+        createdAt: new Date('2026-01-01'),
         subscription: null,
       };
 
@@ -567,7 +589,9 @@ describe('auth.service', () => {
         email: 'admin@example.com',
         role: 'admin',
         name: 'Admin User',
+        avatarUrl: null,
         emailVerified: true,
+        createdAt: new Date('2026-01-01'),
         subscription: null,
       };
 

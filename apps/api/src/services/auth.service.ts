@@ -76,10 +76,12 @@ export interface SessionResponse {
   userId: string;
   email: string;
   name: string | null;
+  avatarUrl: string | null;
   subscriptionStatus: SubscriptionStatus;
   trialEndsAt: Date | null;
   isVerified: boolean;
   role: 'free' | 'pro' | 'admin';
+  createdAt: string;
 }
 
 /**
@@ -426,10 +428,12 @@ export function getCurrentSession(user: AuthenticatedUser): SessionResponse {
     userId: user.id,
     email: user.email,
     name: user.name,
+    avatarUrl: user.avatarUrl,
     subscriptionStatus: getSubscriptionStatus(user),
     trialEndsAt: getTrialEndsAt(user),
     isVerified: user.emailVerified,
     role: user.role,
+    createdAt: user.createdAt.toISOString(),
   };
 }
 
@@ -453,7 +457,9 @@ export async function getUserById(userId: string): Promise<AuthenticatedUser> {
     email: user.email,
     role: user.role,
     name: user.name,
+    avatarUrl: user.avatarUrl,
     emailVerified: user.emailVerified,
+    createdAt: user.createdAt,
     subscription: user.subscription
       ? {
           plan: user.subscription.plan as 'free' | 'pro',
