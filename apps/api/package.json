@@ -19,6 +19,8 @@
   },
   "dependencies": {
     "@plpg/shared": "^0.1.0",
+    "@types/bcryptjs": "^2.4.6",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",

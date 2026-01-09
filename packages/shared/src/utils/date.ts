@@ -34,7 +34,11 @@ export function formatDateISO(date: Date | string): string {
  */
 export function formatDateDisplay(
   date: Date | string,
-  options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' }
+  options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }
 ): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('en-US', options);
@@ -78,9 +82,15 @@ export function formatRelativeTime(date: Date | string): string {
   const diffMs = d.getTime() - now.getTime();
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return 'today';
-  if (diffDays === 1) return 'tomorrow';
-  if (diffDays === -1) return 'yesterday';
+  if (diffDays === 0) {
+    return 'today';
+  }
+  if (diffDays === 1) {
+    return 'tomorrow';
+  }
+  if (diffDays === -1) {
+    return 'yesterday';
+  }
 
   const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
 
@@ -106,7 +116,10 @@ export function formatRelativeTime(date: Date | string): string {
  * @example
  * daysBetween('2026-01-01', '2026-01-15') // 14
  */
-export function daysBetween(date1: Date | string, date2: Date | string): number {
+export function daysBetween(
+  date1: Date | string,
+  date2: Date | string
+): number {
   const d1 = typeof date1 === 'string' ? new Date(date1) : date1;
   const d2 = typeof date2 === 'string' ? new Date(date2) : date2;
   const diffMs = Math.abs(d2.getTime() - d1.getTime());
@@ -125,7 +138,8 @@ export function daysBetween(date1: Date | string, date2: Date | string): number 
  * addDays('2026-01-01', 14) // Date: 2026-01-15
  */
 export function addDays(date: Date | string, days: number): Date {
-  const d = typeof date === 'string' ? new Date(date) : new Date(date.getTime());
+  const d =
+    typeof date === 'string' ? new Date(date) : new Date(date.getTime());
   d.setDate(d.getDate() + days);
   return d;
 }
@@ -150,7 +164,8 @@ export function addWeeks(date: Date | string, weeks: number): Date {
  * @returns {Date} Start of the week (Monday)
  */
 export function startOfWeek(date: Date | string): Date {
-  const d = typeof date === 'string' ? new Date(date) : new Date(date.getTime());
+  const d =
+    typeof date === 'string' ? new Date(date) : new Date(date.getTime());
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   d.setDate(diff);

@@ -6,9 +6,8 @@
  * @description Roadmap domain types for personalized learning paths.
  */
 
-import type { Phase } from './skill';
-import type { Skill } from './skill';
 import type { Progress } from './progress';
+import type { Phase, Skill } from './skill';
 
 /**
  * Module status enumeration.
@@ -23,7 +22,12 @@ import type { Progress } from './progress';
  * - completed: Successfully finished
  * - skipped: User chose to skip
  */
-export type ModuleStatus = 'locked' | 'available' | 'in_progress' | 'completed' | 'skipped';
+export type ModuleStatus =
+  | 'locked'
+  | 'available'
+  | 'in_progress'
+  | 'completed'
+  | 'skipped';
 
 /**
  * Core roadmap entity representing a user's learning path.
