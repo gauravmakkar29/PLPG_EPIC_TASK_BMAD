@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import * as analytics from '../../lib/analytics';
-import * as api from '../../lib/api';
+import * as authService from '../../services/auth.service';
 import { useUIStore } from '../../stores/uiStore';
 import { render } from '../../test/utils';
 
@@ -38,7 +38,12 @@ vi.mock('../../lib/analytics', () => ({
   },
 }));
 
-// Mock the api module for clearTokens
+// Mock the auth service for logoutUser
+vi.mock('../../services/auth.service', () => ({
+  logoutUser: vi.fn().mockResolvedValue({ success: true, message: 'Successfully logged out' }),
+}));
+
+// Mock the api module (still needed for other components)
 vi.mock('../../lib/api', () => ({
   clearTokens: vi.fn(),
   api: {
@@ -171,7 +176,7 @@ describe('SignOutButton Component', () => {
       });
     });
 
-    it('should clear API tokens when clicked', async () => {
+    it('should call logoutUser service to invalidate server-side session', async () => {
       const user = userEvent.setup();
       render(<SignOutButton />);
 
@@ -179,7 +184,7 @@ describe('SignOutButton Component', () => {
       await user.click(button);
 
       await waitFor(() => {
-        expect(api.clearTokens).toHaveBeenCalled();
+        expect(authService.logoutUser).toHaveBeenCalled();
       });
     });
 

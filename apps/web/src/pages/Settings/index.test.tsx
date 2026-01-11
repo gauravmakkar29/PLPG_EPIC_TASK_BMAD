@@ -5,9 +5,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { screen } from '@testing-library/react';
 import { Settings } from './index';
+import { render } from '../../test/utils';
 
 // Mock auth context
 let mockUser: { id: string; email: string; name: string } | null = {
@@ -16,12 +16,22 @@ let mockUser: { id: string; email: string; name: string } | null = {
   name: 'Test User',
 };
 
-vi.mock('../../contexts/AuthContext', () => ({
-  useAuth: () => ({
-    user: mockUser,
-    isLoading: false,
-    isAuthenticated: !!mockUser,
-  }),
+vi.mock('../../contexts/AuthContext', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../contexts/AuthContext')>();
+  return {
+    ...actual,
+    useAuth: () => ({
+      user: mockUser,
+      isLoading: false,
+      isAuthenticated: !!mockUser,
+      logout: vi.fn(),
+    }),
+  };
+});
+
+// Mock auth service for logoutUser
+vi.mock('../../services/auth.service', () => ({
+  logoutUser: vi.fn().mockResolvedValue({ success: true, message: 'Successfully logged out' }),
 }));
 
 /**
@@ -30,11 +40,7 @@ vi.mock('../../contexts/AuthContext', () => ({
  * @returns Render result
  */
 const renderSettings = () => {
-  return render(
-    <MemoryRouter>
-      <Settings />
-    </MemoryRouter>
-  );
+  return render(<Settings />);
 };
 
 describe('Settings', () => {

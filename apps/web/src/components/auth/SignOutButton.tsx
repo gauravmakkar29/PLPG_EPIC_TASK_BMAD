@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { clearTokens } from '../../lib/api';
+import { logoutUser } from '../../services/auth.service';
 import { trackEvent, AnalyticsEvent, clearUser } from '../../lib/analytics';
 import { useUIStore } from '../../stores/uiStore';
 
@@ -138,7 +138,8 @@ export function SignOutButton({
 
   /**
    * Performs the complete sign out operation.
-   * Clears all local state, caches, and redirects the user.
+   * Calls the backend to invalidate server-side session, clears all local state,
+   * caches, and redirects the user.
    */
   const performSignOut = useCallback(async (): Promise<void> => {
     try {
@@ -153,11 +154,12 @@ export function SignOutButton({
       // Clear analytics user identification
       clearUser();
 
+      // Call backend to invalidate refresh token server-side, then clear local tokens
+      // This is critical for security on shared devices
+      await logoutUser();
+
       // Clear AuthContext state (removes plpg_auth_token and plpg_auth_user)
       logout();
-
-      // Clear API tokens (removes plpg_access_token and plpg_refresh_token)
-      clearTokens();
 
       // Clear TanStack Query cache
       queryClient.clear();

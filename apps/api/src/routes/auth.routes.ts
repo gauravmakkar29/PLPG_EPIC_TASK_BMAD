@@ -8,7 +8,7 @@
 
 import { Router } from 'express';
 import { registerSchema } from '@plpg/shared/validation';
-import { login, register, getMe } from '../controllers/auth.controller';
+import { login, register, getMe, logout } from '../controllers/auth.controller';
 import { validate } from '../middleware/validate.middleware';
 import { jwtMiddleware, requireAuth } from '../middleware/auth.middleware';
 import { authRateLimiter } from '../middleware/rateLimiter.middleware';
@@ -65,6 +65,32 @@ router.post('/register', authRateLimiter, validate({ body: registerSchema }), re
  * }
  */
 router.get('/me', jwtMiddleware, requireAuth, getMe);
+
+/**
+ * Logout Endpoint
+ *
+ * @route POST /api/v1/auth/logout
+ * @description Invalidates the user's session by removing refresh token(s) from the database.
+ *
+ * @header Authorization - Bearer token (required)
+ *
+ * @body {string} [refreshToken] - The refresh token to invalidate (optional)
+ * @body {boolean} [logoutAll=false] - If true, invalidates all user sessions
+ *
+ * @response 200 - Success
+ * {
+ *   "success": true,
+ *   "message": "Successfully logged out"
+ * }
+ *
+ * @response 401 - Unauthorized
+ * {
+ *   "error": "AuthenticationError",
+ *   "message": "Authentication required",
+ *   "code": "UNAUTHORIZED"
+ * }
+ */
+router.post('/logout', jwtMiddleware, requireAuth, logout);
 
 export const authRoutes = router;
 export default router;
