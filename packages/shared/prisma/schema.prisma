@@ -89,13 +89,14 @@ model PasswordResetToken {
 
 /// User's onboarding responses for roadmap generation
 model OnboardingResponse {
-  id           String    @id @default(uuid())
-  userId       String    @unique @map("user_id")
-  currentRole  String    @map("current_role")
-  targetRole   String    @default("ml_engineer") @map("target_role")
-  weeklyHours  Int       @map("weekly_hours")
-  skillsToSkip String[]  @default([]) @map("skills_to_skip")
-  completedAt  DateTime? @map("completed_at")
+  id             String    @id @default(uuid())
+  userId         String    @unique @map("user_id")
+  currentRole    String    @map("current_role")
+  customRoleText String?   @map("custom_role_text")
+  targetRole     String    @default("ml_engineer") @map("target_role")
+  weeklyHours    Int       @map("weekly_hours")
+  skillsToSkip   String[]  @default([]) @map("skills_to_skip")
+  completedAt    DateTime? @map("completed_at")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

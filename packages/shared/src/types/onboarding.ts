@@ -15,6 +15,7 @@
  * @property {string} id - Unique identifier (UUID)
  * @property {string} userId - Reference to user
  * @property {string} currentRole - User's current job role
+ * @property {string | null} customRoleText - Custom role description when 'other' is selected
  * @property {string} targetRole - Desired target role
  * @property {number} weeklyHours - Hours available per week for learning
  * @property {string[]} skillsToSkip - Skill IDs to exclude from roadmap
@@ -25,6 +26,7 @@ export interface OnboardingResponse {
   id: string;
   userId: string;
   currentRole: string;
+  customRoleText: string | null;
   targetRole: string;
   weeklyHours: number;
   skillsToSkip: string[];
@@ -37,13 +39,14 @@ export interface OnboardingResponse {
  *
  * @constant CurrentRole
  * @description Predefined roles users can select as their current position.
+ * Aligned with Jira Story AIRE-234 requirements.
  */
 export type CurrentRole =
   | 'backend_developer'
-  | 'frontend_developer'
-  | 'fullstack_developer'
-  | 'data_analyst'
   | 'devops_engineer'
+  | 'data_analyst'
+  | 'qa_engineer'
+  | 'it_professional'
   | 'other';
 
 /**
@@ -70,9 +73,12 @@ export type WeeklyHoursOption = 5 | 10 | 15 | 20;
  * Onboarding step data for step 1 (current role).
  *
  * @interface OnboardingStep1Data
+ * @property {CurrentRole} currentRole - Selected role from predefined options
+ * @property {string} [customRoleText] - Custom role description when 'other' is selected
  */
 export interface OnboardingStep1Data {
   currentRole: CurrentRole;
+  customRoleText?: string;
 }
 
 /**

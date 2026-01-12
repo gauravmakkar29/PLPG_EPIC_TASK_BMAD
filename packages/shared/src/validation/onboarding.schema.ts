@@ -11,13 +11,14 @@ import { z } from 'zod';
 /**
  * Current role options.
  * Valid values for user's current job role.
+ * Aligned with Jira Story AIRE-234 requirements.
  */
 export const currentRoleValues = [
   'backend_developer',
-  'frontend_developer',
-  'fullstack_developer',
-  'data_analyst',
   'devops_engineer',
+  'data_analyst',
+  'qa_engineer',
+  'it_professional',
   'other',
 ] as const;
 
@@ -91,14 +92,43 @@ export const skillsToSkipSchema = z
   .default([]);
 
 /**
+ * Custom role text validation schema.
+ * Required when 'other' role is selected.
+ *
+ * @schema customRoleTextSchema
+ * @description Validates the custom role text input.
+ */
+export const customRoleTextSchema = z
+  .string()
+  .min(2, 'Custom role must be at least 2 characters')
+  .max(100, 'Custom role must be at most 100 characters')
+  .optional();
+
+/**
  * Onboarding step 1 validation schema.
+ * Includes custom role text validation when 'other' is selected.
  *
  * @schema onboardingStep1Schema
  * @description Validates step 1 (current role) submission.
  */
-export const onboardingStep1Schema = z.object({
-  currentRole: currentRoleSchema,
-});
+export const onboardingStep1Schema = z
+  .object({
+    currentRole: currentRoleSchema,
+    customRoleText: customRoleTextSchema,
+  })
+  .refine(
+    (data) => {
+      // If 'other' is selected, customRoleText must be provided
+      if (data.currentRole === 'other') {
+        return data.customRoleText && data.customRoleText.trim().length >= 2;
+      }
+      return true;
+    },
+    {
+      message: 'Please specify your role when selecting "Other"',
+      path: ['customRoleText'],
+    }
+  );
 
 /**
  * Onboarding step 2 validation schema.

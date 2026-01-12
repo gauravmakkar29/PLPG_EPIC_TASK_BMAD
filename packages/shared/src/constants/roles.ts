@@ -10,29 +10,31 @@ import type { CurrentRole, TargetRole } from '../types/onboarding';
 
 /**
  * Current role display names.
+ * Aligned with Jira Story AIRE-234 requirements.
  *
  * @constant CURRENT_ROLE_NAMES
  */
 export const CURRENT_ROLE_NAMES: Record<CurrentRole, string> = {
   backend_developer: 'Backend Developer',
-  frontend_developer: 'Frontend Developer',
-  fullstack_developer: 'Full Stack Developer',
-  data_analyst: 'Data Analyst',
   devops_engineer: 'DevOps Engineer',
+  data_analyst: 'Data Analyst',
+  qa_engineer: 'QA Engineer',
+  it_professional: 'IT Professional',
   other: 'Other',
 } as const;
 
 /**
  * Current role descriptions.
+ * Provides context for each role option in the onboarding UI.
  *
  * @constant CURRENT_ROLE_DESCRIPTIONS
  */
 export const CURRENT_ROLE_DESCRIPTIONS: Record<CurrentRole, string> = {
   backend_developer: 'Building server-side applications and APIs',
-  frontend_developer: 'Creating user interfaces and client-side applications',
-  fullstack_developer: 'Working across the entire application stack',
-  data_analyst: 'Analyzing data and creating insights',
   devops_engineer: 'Managing infrastructure and deployment pipelines',
+  data_analyst: 'Analyzing data and creating insights',
+  qa_engineer: 'Ensuring software quality through testing',
+  it_professional: 'Managing IT systems and infrastructure',
   other: 'A different technical role',
 } as const;
 
@@ -62,6 +64,7 @@ export const TARGET_ROLE_DESCRIPTIONS: Record<TargetRole, string> = {
 
 /**
  * Current role options for onboarding UI.
+ * Ordered as per Jira Story AIRE-234 requirements.
  *
  * @constant CURRENT_ROLE_OPTIONS
  */
@@ -76,14 +79,9 @@ export const CURRENT_ROLE_OPTIONS: ReadonlyArray<{
     description: CURRENT_ROLE_DESCRIPTIONS.backend_developer,
   },
   {
-    value: 'frontend_developer',
-    label: CURRENT_ROLE_NAMES.frontend_developer,
-    description: CURRENT_ROLE_DESCRIPTIONS.frontend_developer,
-  },
-  {
-    value: 'fullstack_developer',
-    label: CURRENT_ROLE_NAMES.fullstack_developer,
-    description: CURRENT_ROLE_DESCRIPTIONS.fullstack_developer,
+    value: 'devops_engineer',
+    label: CURRENT_ROLE_NAMES.devops_engineer,
+    description: CURRENT_ROLE_DESCRIPTIONS.devops_engineer,
   },
   {
     value: 'data_analyst',
@@ -91,9 +89,14 @@ export const CURRENT_ROLE_OPTIONS: ReadonlyArray<{
     description: CURRENT_ROLE_DESCRIPTIONS.data_analyst,
   },
   {
-    value: 'devops_engineer',
-    label: CURRENT_ROLE_NAMES.devops_engineer,
-    description: CURRENT_ROLE_DESCRIPTIONS.devops_engineer,
+    value: 'qa_engineer',
+    label: CURRENT_ROLE_NAMES.qa_engineer,
+    description: CURRENT_ROLE_DESCRIPTIONS.qa_engineer,
+  },
+  {
+    value: 'it_professional',
+    label: CURRENT_ROLE_NAMES.it_professional,
+    description: CURRENT_ROLE_DESCRIPTIONS.it_professional,
   },
   {
     value: 'other',
