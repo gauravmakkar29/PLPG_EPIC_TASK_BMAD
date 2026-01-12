@@ -39,6 +39,8 @@ export {
   TARGET_ROLE_DESCRIPTIONS,
   CURRENT_ROLE_OPTIONS,
   TARGET_ROLE_OPTIONS,
+  TARGET_ROLE_METADATA,
+  type TargetRoleMetadata,
 } from './roles';
 
 /**

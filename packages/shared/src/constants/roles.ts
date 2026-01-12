@@ -106,7 +106,73 @@ export const CURRENT_ROLE_OPTIONS: ReadonlyArray<{
 ] as const;
 
 /**
+ * Target role metadata interface.
+ * Defines the structure for role-specific information displayed in onboarding.
+ *
+ * @interface TargetRoleMetadata
+ * @property {number} estimatedHours - Total estimated learning hours for the path
+ * @property {string[]} typicalOutcomes - List of typical career outcomes after completion
+ * @property {boolean} isAvailable - Whether the path is currently available (MVP: only ML Engineer)
+ */
+export interface TargetRoleMetadata {
+  estimatedHours: number;
+  typicalOutcomes: ReadonlyArray<string>;
+  isAvailable: boolean;
+}
+
+/**
+ * Target role metadata with estimated learning hours and typical outcomes.
+ * Used in Step 2 of onboarding to display role-specific information.
+ *
+ * @constant TARGET_ROLE_METADATA
+ * @description MVP: Only ml_engineer is available, others show "Coming Soon"
+ */
+export const TARGET_ROLE_METADATA: Readonly<Record<TargetRole, TargetRoleMetadata>> = {
+  ml_engineer: {
+    estimatedHours: 300,
+    typicalOutcomes: [
+      'Design and deploy production ML systems',
+      'Build end-to-end ML pipelines',
+      'Optimize model performance at scale',
+      'Collaborate with cross-functional teams',
+    ],
+    isAvailable: true,
+  },
+  data_scientist: {
+    estimatedHours: 250,
+    typicalOutcomes: [
+      'Analyze complex datasets for insights',
+      'Build predictive and statistical models',
+      'Communicate findings to stakeholders',
+      'Drive data-informed decisions',
+    ],
+    isAvailable: false,
+  },
+  mlops_engineer: {
+    estimatedHours: 280,
+    typicalOutcomes: [
+      'Automate ML model deployment',
+      'Build CI/CD pipelines for ML',
+      'Monitor model performance in production',
+      'Manage ML infrastructure at scale',
+    ],
+    isAvailable: false,
+  },
+  ai_engineer: {
+    estimatedHours: 320,
+    typicalOutcomes: [
+      'Build AI-powered applications',
+      'Integrate LLMs and foundation models',
+      'Design conversational AI systems',
+      'Implement responsible AI practices',
+    ],
+    isAvailable: false,
+  },
+} as const;
+
+/**
  * Target role options for onboarding UI.
+ * Combines display information with metadata for rendering role cards.
  *
  * @constant TARGET_ROLE_OPTIONS
  */
@@ -114,25 +180,30 @@ export const TARGET_ROLE_OPTIONS: ReadonlyArray<{
   value: TargetRole;
   label: string;
   description: string;
+  metadata: TargetRoleMetadata;
 }> = [
   {
     value: 'ml_engineer',
     label: TARGET_ROLE_NAMES.ml_engineer,
     description: TARGET_ROLE_DESCRIPTIONS.ml_engineer,
+    metadata: TARGET_ROLE_METADATA.ml_engineer,
   },
   {
     value: 'data_scientist',
     label: TARGET_ROLE_NAMES.data_scientist,
     description: TARGET_ROLE_DESCRIPTIONS.data_scientist,
+    metadata: TARGET_ROLE_METADATA.data_scientist,
   },
   {
     value: 'mlops_engineer',
     label: TARGET_ROLE_NAMES.mlops_engineer,
     description: TARGET_ROLE_DESCRIPTIONS.mlops_engineer,
+    metadata: TARGET_ROLE_METADATA.mlops_engineer,
   },
   {
     value: 'ai_engineer',
     label: TARGET_ROLE_NAMES.ai_engineer,
     description: TARGET_ROLE_DESCRIPTIONS.ai_engineer,
+    metadata: TARGET_ROLE_METADATA.ai_engineer,
   },
 ] as const;
