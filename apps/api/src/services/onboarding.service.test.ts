@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   getOnboardingStatus,
   saveStep1,
+  saveStep4,
   hasCompletedOnboarding,
   getOnboardingByUserId,
 } from './onboarding.service';
@@ -23,6 +24,7 @@ vi.mock('../lib/prisma', () => ({
     onboardingResponse: {
       findUnique: vi.fn(),
       upsert: vi.fn(),
+      update: vi.fn(),
     },
   },
 }));
@@ -33,6 +35,7 @@ import { prisma } from '../lib/prisma';
 // Type assertion for mocked functions
 const mockFindUnique = prisma.onboardingResponse.findUnique as ReturnType<typeof vi.fn>;
 const mockUpsert = prisma.onboardingResponse.upsert as ReturnType<typeof vi.fn>;
+const mockUpdate = prisma.onboardingResponse.update as ReturnType<typeof vi.fn>;
 
 describe('onboarding.service', () => {
   beforeEach(() => {
@@ -325,6 +328,190 @@ describe('onboarding.service', () => {
       expect(result?.id).toBe('onboarding-123');
       expect(result?.currentRole).toBe('backend_developer');
       expect(result?.skillsToSkip).toEqual(['skill-1']);
+    });
+  });
+
+  /**
+   * Tests for saveStep4
+   *
+   * @requirements
+   * - AIRE-237: Story 2.5 - Existing Skills Selection
+   * - Skills saved and passed to roadmap engine
+   * - Selections persist in database
+   */
+  describe('saveStep4', () => {
+    it('should save skills to skip when onboarding exists', async () => {
+      const existingResponse = {
+        id: 'onboarding-123',
+        userId: 'user-123',
+        currentRole: 'backend_developer',
+        customRoleText: null,
+        targetRole: 'ml_engineer',
+        weeklyHours: 10,
+        skillsToSkip: [],
+        completedAt: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      mockFindUnique.mockResolvedValue(existingResponse);
+
+      const updatedResponse = {
+        ...existingResponse,
+        skillsToSkip: ['skill-1', 'skill-2'],
+        updatedAt: new Date('2024-01-02'),
+      };
+
+      mockUpdate.mockResolvedValue(updatedResponse);
+
+      const result = await saveStep4('user-123', {
+        skillsToSkip: ['skill-1', 'skill-2'],
+      });
+
+      expect(result.skillsToSkip).toEqual(['skill-1', 'skill-2']);
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { userId: 'user-123' },
+        data: {
+          skillsToSkip: ['skill-1', 'skill-2'],
+          updatedAt: expect.any(Date),
+        },
+      });
+    });
+
+    it('should save empty skills array when none selected', async () => {
+      const existingResponse = {
+        id: 'onboarding-123',
+        userId: 'user-123',
+        currentRole: 'backend_developer',
+        customRoleText: null,
+        targetRole: 'ml_engineer',
+        weeklyHours: 10,
+        skillsToSkip: ['skill-1'],
+        completedAt: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      mockFindUnique.mockResolvedValue(existingResponse);
+
+      const updatedResponse = {
+        ...existingResponse,
+        skillsToSkip: [],
+        updatedAt: new Date('2024-01-02'),
+      };
+
+      mockUpdate.mockResolvedValue(updatedResponse);
+
+      const result = await saveStep4('user-123', {
+        skillsToSkip: [],
+      });
+
+      expect(result.skillsToSkip).toEqual([]);
+    });
+
+    it('should throw error when onboarding does not exist', async () => {
+      mockFindUnique.mockResolvedValue(null);
+
+      await expect(
+        saveStep4('user-123', { skillsToSkip: ['skill-1'] })
+      ).rejects.toThrow('Onboarding not started. Please complete previous steps first.');
+    });
+
+    it('should throw error when skillsToSkip is not an array', async () => {
+      const existingResponse = {
+        id: 'onboarding-123',
+        userId: 'user-123',
+        currentRole: 'backend_developer',
+        customRoleText: null,
+        targetRole: 'ml_engineer',
+        weeklyHours: 10,
+        skillsToSkip: [],
+        completedAt: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      mockFindUnique.mockResolvedValue(existingResponse);
+
+      await expect(
+        saveStep4('user-123', { skillsToSkip: 'not-an-array' as any })
+      ).rejects.toThrow('skillsToSkip must be an array');
+    });
+
+    it('should save multiple skills when all are selected', async () => {
+      const existingResponse = {
+        id: 'onboarding-123',
+        userId: 'user-123',
+        currentRole: 'backend_developer',
+        customRoleText: null,
+        targetRole: 'ml_engineer',
+        weeklyHours: 10,
+        skillsToSkip: [],
+        completedAt: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      const allSkills = [
+        'skill-1',
+        'skill-2',
+        'skill-3',
+        'skill-4',
+        'skill-5',
+        'skill-6',
+        'skill-7',
+      ];
+
+      mockFindUnique.mockResolvedValue(existingResponse);
+
+      const updatedResponse = {
+        ...existingResponse,
+        skillsToSkip: allSkills,
+        updatedAt: new Date('2024-01-02'),
+      };
+
+      mockUpdate.mockResolvedValue(updatedResponse);
+
+      const result = await saveStep4('user-123', {
+        skillsToSkip: allSkills,
+      });
+
+      expect(result.skillsToSkip).toHaveLength(7);
+      expect(result.skillsToSkip).toEqual(allSkills);
+    });
+
+    it('should preserve other onboarding fields when updating skills', async () => {
+      const existingResponse = {
+        id: 'onboarding-123',
+        userId: 'user-123',
+        currentRole: 'data_analyst',
+        customRoleText: null,
+        targetRole: 'data_scientist',
+        weeklyHours: 15,
+        skillsToSkip: [],
+        completedAt: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-01'),
+      };
+
+      mockFindUnique.mockResolvedValue(existingResponse);
+
+      const updatedResponse = {
+        ...existingResponse,
+        skillsToSkip: ['skill-1'],
+        updatedAt: new Date('2024-01-02'),
+      };
+
+      mockUpdate.mockResolvedValue(updatedResponse);
+
+      const result = await saveStep4('user-123', {
+        skillsToSkip: ['skill-1'],
+      });
+
+      expect(result.currentRole).toBe('data_analyst');
+      expect(result.targetRole).toBe('data_scientist');
+      expect(result.weeklyHours).toBe(15);
+      expect(result.skillsToSkip).toEqual(['skill-1']);
     });
   });
 });

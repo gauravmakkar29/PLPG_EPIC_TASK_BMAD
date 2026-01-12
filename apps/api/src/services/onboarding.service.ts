@@ -22,6 +22,7 @@ import type {
   OnboardingResponse,
   OnboardingStatus,
   OnboardingStep1Data,
+  OnboardingStep4Data,
   CurrentRole,
 } from '@plpg/shared';
 import { logger } from '../lib/logger';
@@ -214,6 +215,79 @@ export async function getOnboardingByUserId(
   });
 
   if (!response) return null;
+
+  return {
+    id: response.id,
+    userId: response.userId,
+    currentRole: response.currentRole,
+    customRoleText: response.customRoleText,
+    targetRole: response.targetRole,
+    weeklyHours: response.weeklyHours,
+    skillsToSkip: response.skillsToSkip,
+    completedAt: response.completedAt,
+    createdAt: response.createdAt,
+  };
+}
+
+/**
+ * Saves step 4 data (existing skills selection) for a user.
+ *
+ * Updates the onboarding response with the skills the user wants to skip.
+ * These skills will be excluded from the generated roadmap.
+ *
+ * @param {string} userId - The user's ID
+ * @param {OnboardingStep4Data} data - Step 4 form data containing skillsToSkip array
+ * @returns {Promise<OnboardingResponse>} The updated onboarding response
+ *
+ * @throws {Error} If no onboarding response exists for the user
+ * @throws {Error} If the save operation fails
+ *
+ * @requirements
+ * - AIRE-237: Story 2.5 - Existing Skills Selection
+ * - Skills saved and passed to roadmap engine
+ * - Selections persist in database
+ *
+ * @example
+ * ```ts
+ * const response = await saveStep4(
+ *   'user-123',
+ *   { skillsToSkip: ['skill-id-1', 'skill-id-2'] }
+ * );
+ * ```
+ */
+export async function saveStep4(
+  userId: string,
+  data: OnboardingStep4Data
+): Promise<OnboardingResponse> {
+  logger.debug({ userId, data }, 'Saving step 4 data');
+
+  // Validate that skillsToSkip is an array (additional runtime check)
+  if (!Array.isArray(data.skillsToSkip)) {
+    throw new Error('skillsToSkip must be an array');
+  }
+
+  // Check if onboarding response exists
+  const existing = await prisma.onboardingResponse.findUnique({
+    where: { userId },
+  });
+
+  if (!existing) {
+    throw new Error('Onboarding not started. Please complete previous steps first.');
+  }
+
+  // Update the onboarding response with skills to skip
+  const response = await prisma.onboardingResponse.update({
+    where: { userId },
+    data: {
+      skillsToSkip: data.skillsToSkip,
+      updatedAt: new Date(),
+    },
+  });
+
+  logger.info(
+    { userId, skillCount: data.skillsToSkip.length },
+    'Step 4 data saved successfully'
+  );
 
   return {
     id: response.id,

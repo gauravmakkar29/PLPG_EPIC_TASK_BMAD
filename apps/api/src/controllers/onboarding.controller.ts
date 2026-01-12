@@ -16,11 +16,12 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { onboardingStep1Schema } from '@plpg/shared/validation';
+import { onboardingStep1Schema, onboardingStep4Schema } from '@plpg/shared/validation';
 import { AuthenticationError, ValidationError } from '@plpg/shared';
 import {
   getOnboardingStatus,
   saveStep1,
+  saveStep4,
 } from '../services/onboarding.service';
 import { logger } from '../lib/logger';
 
@@ -138,6 +139,84 @@ export async function saveStep1Handler(
     });
   } catch (error) {
     logger.error({ error }, 'Error saving step 1 data');
+    next(error);
+  }
+}
+
+/**
+ * Save step 4 data endpoint handler.
+ *
+ * Saves the existing skills selection for the authenticated user.
+ * These skills will be skipped in the generated roadmap.
+ *
+ * @route PATCH /api/v1/onboarding/step/4
+ * @param {Request} req - Express request with step 4 data in body
+ * @param {Response} res - Express response
+ * @param {NextFunction} next - Express next function
+ * @returns {Promise<void>}
+ *
+ * @requirements
+ * - AIRE-237: Story 2.5 - Existing Skills Selection
+ * - Skills saved and passed to roadmap engine
+ * - Selections persist in database
+ *
+ * @body {string[]} skillsToSkip - Array of skill IDs to skip
+ *
+ * @response 200 - Success
+ * {
+ *   "success": true,
+ *   "data": OnboardingResponse
+ * }
+ *
+ * @response 400 - Validation Error
+ * @response 401 - Unauthorized
+ * @response 500 - Internal Server Error
+ */
+export async function saveStep4Handler(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    // User should be set by jwtMiddleware + requireAuth
+    if (!req.user) {
+      throw new AuthenticationError('Authentication required');
+    }
+
+    const userId = req.user.id;
+
+    // Validate request body
+    const parseResult = onboardingStep4Schema.safeParse(req.body);
+
+    if (!parseResult.success) {
+      const errorMessage =
+        parseResult.error.errors[0]?.message || 'Invalid request data';
+      throw new ValidationError(errorMessage);
+    }
+
+    const { skillsToSkip } = parseResult.data;
+
+    logger.debug(
+      { userId, skillCount: skillsToSkip.length },
+      'Saving step 4 data'
+    );
+
+    // Save step 4 data
+    const response = await saveStep4(userId, {
+      skillsToSkip,
+    });
+
+    logger.info(
+      { userId, skillCount: skillsToSkip.length },
+      'Step 4 saved successfully'
+    );
+
+    res.status(200).json({
+      success: true,
+      data: response,
+    });
+  } catch (error) {
+    logger.error({ error }, 'Error saving step 4 data');
     next(error);
   }
 }

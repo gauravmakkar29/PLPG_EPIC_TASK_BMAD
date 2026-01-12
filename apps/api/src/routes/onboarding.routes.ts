@@ -17,8 +17,8 @@
  */
 
 import { Router } from 'express';
-import { onboardingStep1Schema } from '@plpg/shared/validation';
-import { getStatus, saveStep1Handler } from '../controllers/onboarding.controller';
+import { onboardingStep1Schema, onboardingStep4Schema } from '@plpg/shared/validation';
+import { getStatus, saveStep1Handler, saveStep4Handler } from '../controllers/onboarding.controller';
 import { validate } from '../middleware/validate.middleware';
 import { jwtMiddleware, requireAuth } from '../middleware/auth.middleware';
 
@@ -94,10 +94,52 @@ router.patch(
   saveStep1Handler
 );
 
-// Future endpoints for steps 2-5 will be added here:
+/**
+ * Save Step 4 Data Endpoint
+ *
+ * @route PATCH /api/v1/onboarding/step/4
+ * @description Saves the existing skills selection for step 4 of onboarding.
+ * Updates the skillsToSkip array with skill IDs the user wants to skip.
+ *
+ * @requirements
+ * - AIRE-237: Story 2.5 - Existing Skills Selection
+ * - Skills saved and passed to roadmap engine
+ *
+ * @header Authorization - Bearer token (required)
+ *
+ * @body {string[]} skillsToSkip - Array of skill UUIDs to skip
+ *
+ * @response 200 - Success
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "id": string,
+ *     "userId": string,
+ *     "currentRole": string,
+ *     "customRoleText": string | null,
+ *     "targetRole": string,
+ *     "weeklyHours": number,
+ *     "skillsToSkip": string[],
+ *     "completedAt": Date | null,
+ *     "createdAt": Date
+ *   }
+ * }
+ *
+ * @response 400 - Validation Error (invalid skill IDs)
+ * @response 401 - Unauthorized
+ * @response 500 - Internal Server Error
+ */
+router.patch(
+  '/step/4',
+  jwtMiddleware,
+  requireAuth,
+  validate({ body: onboardingStep4Schema }),
+  saveStep4Handler
+);
+
+// Future endpoints for remaining steps will be added here:
 // router.patch('/step/2', jwtMiddleware, requireAuth, validate({ body: onboardingStep2Schema }), saveStep2Handler);
 // router.patch('/step/3', jwtMiddleware, requireAuth, validate({ body: onboardingStep3Schema }), saveStep3Handler);
-// router.patch('/step/4', jwtMiddleware, requireAuth, validate({ body: onboardingStep4Schema }), saveStep4Handler);
 // router.post('/complete', jwtMiddleware, requireAuth, validate({ body: completeOnboardingSchema }), completeHandler);
 
 export const onboardingRoutes = router;

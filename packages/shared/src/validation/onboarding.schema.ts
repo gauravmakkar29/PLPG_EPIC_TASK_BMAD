@@ -34,8 +34,22 @@ export const targetRoleValues = [
 ] as const;
 
 /**
- * Weekly hours options.
- * Valid values for weekly time commitment.
+ * Weekly hours configuration constants.
+ * Defines the valid range for weekly time commitment.
+ *
+ * @requirement AIRE-236 - Slider input for hours (range: 5-20, step: 1)
+ */
+export const WEEKLY_HOURS_MIN = 5;
+export const WEEKLY_HOURS_MAX = 20;
+export const WEEKLY_HOURS_DEFAULT = 10;
+export const WEEKLY_HOURS_STEP = 1;
+export const WEEKLY_HOURS_RECOMMENDED_MIN = 10;
+export const WEEKLY_HOURS_RECOMMENDED_MAX = 15;
+
+/**
+ * Legacy weekly hours options.
+ * Kept for backward compatibility with existing code.
+ * @deprecated Use WEEKLY_HOURS_MIN/MAX for range validation
  */
 export const weeklyHoursValues = [5, 10, 15, 20] as const;
 
@@ -60,26 +74,36 @@ export const targetRoleSchema = z.enum(targetRoleValues, {
 });
 
 /**
- * Weekly hours validation schema.
+ * Weekly hours validation schema (string input).
+ * Accepts string input and transforms to number.
  *
  * @schema weeklyHoursSchema
- * @description Validates weekly hours selection.
+ * @description Validates weekly hours selection from string input.
+ * @requirement AIRE-236 - Slider input for hours (range: 5-20, step: 1)
  */
-export const weeklyHoursSchema = z.enum(
-  weeklyHoursValues.map(String) as [string, ...string[]],
-  {
-    errorMap: () => ({ message: 'Please select a valid weekly hours option' }),
-  }
-).transform((val) => parseInt(val, 10) as 5 | 10 | 15 | 20);
+export const weeklyHoursSchema = z
+  .string()
+  .transform((val) => parseInt(val, 10))
+  .refine(
+    (val) => !isNaN(val) && val >= WEEKLY_HOURS_MIN && val <= WEEKLY_HOURS_MAX,
+    {
+      message: `Weekly hours must be between ${WEEKLY_HOURS_MIN} and ${WEEKLY_HOURS_MAX}`,
+    }
+  );
 
 /**
- * Alternative weekly hours schema accepting numbers directly.
+ * Weekly hours validation schema accepting numbers directly.
+ * Primary schema for slider input validation.
+ *
+ * @schema weeklyHoursNumberSchema
+ * @description Validates weekly hours as integer within valid range.
+ * @requirement AIRE-236 - Slider input for hours (range: 5-20, step: 1)
  */
 export const weeklyHoursNumberSchema = z
   .number()
-  .refine((val): val is 5 | 10 | 15 | 20 => (weeklyHoursValues as readonly number[]).includes(val), {
-    message: 'Weekly hours must be 5, 10, 15, or 20',
-  });
+  .int('Weekly hours must be a whole number')
+  .min(WEEKLY_HOURS_MIN, `Weekly hours must be at least ${WEEKLY_HOURS_MIN}`)
+  .max(WEEKLY_HOURS_MAX, `Weekly hours cannot exceed ${WEEKLY_HOURS_MAX}`);
 
 /**
  * Skills to skip validation schema.

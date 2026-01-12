@@ -62,12 +62,14 @@ export type TargetRole =
   | 'ai_engineer';
 
 /**
- * Weekly hours commitment options.
+ * Weekly hours commitment type.
+ * Supports any integer value from 5 to 20 hours per week.
  *
  * @constant WeeklyHoursOption
- * @description Predefined weekly time commitment options.
+ * @description Weekly time commitment value (5-20 hours).
+ * @requirement AIRE-236 - Slider input for hours (range: 5-20, step: 1)
  */
-export type WeeklyHoursOption = 5 | 10 | 15 | 20;
+export type WeeklyHoursOption = number;
 
 /**
  * Onboarding step data for step 1 (current role).

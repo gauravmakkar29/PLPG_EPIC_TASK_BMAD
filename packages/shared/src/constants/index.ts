@@ -18,6 +18,18 @@ export {
   type PhaseMetadata,
 } from './phases';
 
+// Skills constants (AIRE-237: Step 4 Existing Skills)
+export {
+  PREREQUISITE_SKILLS,
+  SKILL_CATEGORIES,
+  getPrerequisiteSkillById,
+  getPrerequisiteSkillBySlug,
+  getSkillsByCategory,
+  getAllPrerequisiteSkillIds,
+  isValidPrerequisiteSkillId,
+  type PrerequisiteSkill,
+} from './skills';
+
 // Subscription constants
 export {
   SUBSCRIPTION_PLANS,

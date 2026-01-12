@@ -41,6 +41,13 @@ export {
   currentRoleValues,
   targetRoleValues,
   weeklyHoursValues,
+  // Weekly hours slider configuration constants (AIRE-236)
+  WEEKLY_HOURS_MIN,
+  WEEKLY_HOURS_MAX,
+  WEEKLY_HOURS_DEFAULT,
+  WEEKLY_HOURS_STEP,
+  WEEKLY_HOURS_RECOMMENDED_MIN,
+  WEEKLY_HOURS_RECOMMENDED_MAX,
   currentRoleSchema,
   targetRoleSchema,
   weeklyHoursSchema,
