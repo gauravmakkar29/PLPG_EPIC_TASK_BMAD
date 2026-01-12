@@ -7,3 +7,7 @@
 
 export { ProtectedRoute } from './ProtectedRoute';
 export type { ProtectedRouteProps } from './ProtectedRoute';
+
+// Auth components
+export { SignOutButton } from './auth';
+export type { SignOutButtonProps } from './auth';

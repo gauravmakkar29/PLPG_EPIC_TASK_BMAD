@@ -26,6 +26,7 @@ import {
   setAccessToken,
   setRefreshToken,
   clearTokens,
+  getRefreshToken,
   getErrorMessage,
 } from '../lib/api';
 
@@ -371,27 +372,72 @@ export async function updateProfile(
 }
 
 /**
- * Logs out the current user.
- * Clears all authentication tokens from localStorage.
- * Optionally notifies backend to invalidate tokens.
+ * Logout API response structure.
  *
- * @returns {Promise<void>}
+ * @interface LogoutResponse
+ * @property {boolean} success - Whether the logout was successful
+ * @property {string} message - Success or error message
+ */
+export interface LogoutResponse {
+  success: boolean;
+  message: string;
+}
+
+/**
+ * Logout options for configuring logout behavior.
+ *
+ * @interface LogoutOptions
+ * @property {boolean} [logoutAll=false] - If true, logs out from all sessions
+ */
+export interface LogoutOptions {
+  logoutAll?: boolean;
+}
+
+/**
+ * Logs out the current user.
+ * Calls the backend to invalidate the refresh token, then clears local tokens.
+ * This ensures server-side session invalidation for security on shared devices.
+ *
+ * @param {LogoutOptions} [options] - Logout options
+ * @param {boolean} [options.logoutAll=false] - Logout from all sessions
+ * @returns {Promise<LogoutResponse>} Logout response
  *
  * @example
  * ```typescript
+ * // Logout from current session
  * await logoutUser();
- * // User is now logged out, tokens cleared
+ *
+ * // Logout from all sessions
+ * await logoutUser({ logoutAll: true });
  * ```
  */
-export async function logoutUser(): Promise<void> {
+export async function logoutUser(
+  options: LogoutOptions = {}
+): Promise<LogoutResponse> {
+  const { logoutAll = false } = options;
+
   try {
-    // Notify backend to invalidate tokens (optional)
-    await api.post('/auth/logout');
+    // Get the current refresh token to invalidate server-side
+    const refreshToken = getRefreshToken();
+
+    // Call backend to invalidate the refresh token
+    const response = await api.post<LogoutResponse>('/auth/logout', {
+      refreshToken,
+      logoutAll,
+    });
+
+    return response.data;
   } catch (error) {
-    // Continue with logout even if API call fails
+    // Log the error but continue with local cleanup
     console.error('Logout API call failed:', error);
+
+    // Return a failure response but don't throw - local cleanup will still happen
+    return {
+      success: false,
+      message: getErrorMessage(error),
+    };
   } finally {
-    // Always clear tokens locally
+    // Always clear tokens locally, even if API call fails
     clearTokens();
   }
 }

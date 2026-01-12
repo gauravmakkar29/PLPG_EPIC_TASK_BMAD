@@ -9,7 +9,15 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { RegisterInput } from '@plpg/shared/validation';
 import { AuthenticationError, loginSchema } from '@plpg/shared';
-import { loginUser, registerUser, getCurrentSession } from '../services/auth.service';
+import {
+  loginUser,
+  registerUser,
+  getCurrentSession,
+  invalidateRefreshToken,
+  invalidateAllUserTokens,
+  AUTH_EVENTS,
+  trackAuthEvent,
+} from '../services/auth.service';
 import { logger } from '../lib/logger';
 
 /**
@@ -135,6 +143,82 @@ export async function getMe(
 
     res.status(200).json(session);
   } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Request body type for logout endpoint.
+ */
+interface LogoutRequest {
+  refreshToken?: string;
+  logoutAll?: boolean;
+}
+
+/**
+ * Logs out the current user by invalidating their refresh token(s).
+ *
+ * Supports two modes:
+ * - Single session logout: Invalidates the provided refresh token
+ * - All sessions logout: Invalidates all refresh tokens for the user
+ *
+ * @function logout
+ * @param {Request} req - Express request with authenticated user and optional refresh token
+ * @param {Response} res - Express response object
+ * @param {NextFunction} next - Express next function for error handling
+ * @returns {Promise<void>}
+ *
+ * @route POST /api/v1/auth/logout
+ */
+export async function logout(
+  req: Request<unknown, unknown, LogoutRequest>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { refreshToken, logoutAll = false } = req.body;
+
+    // User should be set by jwtMiddleware + requireAuth
+    if (!req.user) {
+      throw new AuthenticationError('Authentication required');
+    }
+
+    const userId = req.user.id;
+
+    logger.debug(
+      { userId, logoutAll, hasRefreshToken: !!refreshToken },
+      'Processing logout request'
+    );
+
+    if (logoutAll) {
+      // Invalidate all refresh tokens for the user
+      await invalidateAllUserTokens(userId);
+      logger.info({ userId }, 'User logged out from all sessions');
+    } else if (refreshToken) {
+      // Invalidate only the provided refresh token
+      await invalidateRefreshToken(refreshToken);
+      logger.info({ userId }, 'User logged out from current session');
+    } else {
+      // No refresh token provided and not logging out all
+      // Still consider this a successful logout (client-side only)
+      logger.debug({ userId }, 'Logout without refresh token - client-side only');
+    }
+
+    // Track logout analytics event
+    trackAuthEvent(AUTH_EVENTS.LOGOUT_COMPLETED, {
+      userId,
+      logoutAll,
+      method: 'api',
+    });
+
+    res.status(200).json({
+      success: true,
+      message: logoutAll
+        ? 'Successfully logged out from all sessions'
+        : 'Successfully logged out',
+    });
+  } catch (error) {
+    logger.error({ error }, 'Error in logout controller');
     next(error);
   }
 }

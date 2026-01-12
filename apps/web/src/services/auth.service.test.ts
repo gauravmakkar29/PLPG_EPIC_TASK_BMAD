@@ -8,7 +8,7 @@
 /* eslint-disable @typescript-eslint/unbound-method */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { api, setAccessToken, setRefreshToken, clearTokens } from '../lib/api';
+import { api, setAccessToken, setRefreshToken, clearTokens, getRefreshToken } from '../lib/api';
 
 import { loginUser, registerUser, logoutUser } from './auth.service';
 
@@ -25,6 +25,7 @@ vi.mock('../lib/api', async () => {
     setAccessToken: vi.fn(),
     setRefreshToken: vi.fn(),
     clearTokens: vi.fn(),
+    getRefreshToken: vi.fn().mockReturnValue('mock-refresh-token'),
     getErrorMessage: actual.getErrorMessage,
   };
 });
@@ -32,6 +33,8 @@ vi.mock('../lib/api', async () => {
 describe('Auth Service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset getRefreshToken mock to return default value
+    vi.mocked(getRefreshToken).mockReturnValue('mock-refresh-token');
   });
 
   afterEach(() => {
@@ -163,22 +166,57 @@ describe('Auth Service', () => {
   });
 
   describe('logoutUser', () => {
-    it('should call logout endpoint and clear tokens', async () => {
+    it('should call logout endpoint with refresh token and clear local tokens', async () => {
       vi.mocked(api.post).mockResolvedValue({
-        data: { message: 'Logged out' },
+        data: { success: true, message: 'Successfully logged out' },
       });
 
-      await logoutUser();
+      const result = await logoutUser();
 
-      expect(api.post).toHaveBeenCalledWith('/auth/logout');
+      expect(getRefreshToken).toHaveBeenCalled();
+      expect(api.post).toHaveBeenCalledWith('/auth/logout', {
+        refreshToken: 'mock-refresh-token',
+        logoutAll: false,
+      });
       expect(clearTokens).toHaveBeenCalled();
+      expect(result).toEqual({ success: true, message: 'Successfully logged out' });
+    });
+
+    it('should support logout from all sessions', async () => {
+      vi.mocked(api.post).mockResolvedValue({
+        data: { success: true, message: 'Successfully logged out from all sessions' },
+      });
+
+      const result = await logoutUser({ logoutAll: true });
+
+      expect(api.post).toHaveBeenCalledWith('/auth/logout', {
+        refreshToken: 'mock-refresh-token',
+        logoutAll: true,
+      });
+      expect(result).toEqual({ success: true, message: 'Successfully logged out from all sessions' });
     });
 
     it('should clear tokens even if API call fails', async () => {
       vi.mocked(api.post).mockRejectedValue(new Error('Network error'));
 
+      const result = await logoutUser();
+
+      expect(clearTokens).toHaveBeenCalled();
+      expect(result.success).toBe(false);
+    });
+
+    it('should handle null refresh token gracefully', async () => {
+      vi.mocked(getRefreshToken).mockReturnValue(null);
+      vi.mocked(api.post).mockResolvedValue({
+        data: { success: true, message: 'Successfully logged out' },
+      });
+
       await logoutUser();
 
+      expect(api.post).toHaveBeenCalledWith('/auth/logout', {
+        refreshToken: null,
+        logoutAll: false,
+      });
       expect(clearTokens).toHaveBeenCalled();
     });
   });

@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
-import { login } from './auth.controller';
+import { login, logout } from './auth.controller';
 import {
   createMockRequest,
   createMockResponse,
@@ -306,6 +306,179 @@ describe('Auth Controller', () => {
       vi.mocked(authService.loginUser).mockRejectedValue(serviceError);
 
       await login(
+        mockReq as unknown as Request,
+        mockRes as unknown as Response,
+        mockNext as NextFunction
+      );
+
+      expect(mockNext).toHaveBeenCalledWith(serviceError);
+    });
+  });
+
+  describe('logout', () => {
+    /**
+     * Test: Returns 401 when user is not authenticated
+     */
+    it('returns 401 when user is not authenticated', async () => {
+      mockReq.body = {};
+      mockReq.user = undefined;
+
+      await logout(
+        mockReq as unknown as Request,
+        mockRes as unknown as Response,
+        mockNext as NextFunction
+      );
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(AuthenticationError));
+      const error = mockNext.mock.calls[0]?.[0] as AuthenticationError;
+      expect(error.message).toBe('Authentication required');
+    });
+
+    /**
+     * Test: Successfully logs out with refresh token
+     */
+    it('successfully invalidates refresh token when provided', async () => {
+      mockReq.body = { refreshToken: 'mock-refresh-token' };
+      mockReq.user = {
+        id: mockUser.id,
+        email: mockUser.email,
+        role: mockUser.role,
+        name: mockUser.name,
+        avatarUrl: mockUser.avatarUrl,
+        emailVerified: mockUser.emailVerified,
+        createdAt: mockUser.createdAt,
+        subscription: null,
+      };
+      vi.mocked(authService.invalidateRefreshToken).mockResolvedValue();
+
+      await logout(
+        mockReq as unknown as Request,
+        mockRes as unknown as Response,
+        mockNext as NextFunction
+      );
+
+      expect(authService.invalidateRefreshToken).toHaveBeenCalledWith('mock-refresh-token');
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Successfully logged out',
+      });
+    });
+
+    /**
+     * Test: Successfully logs out from all sessions
+     */
+    it('invalidates all tokens when logoutAll is true', async () => {
+      mockReq.body = { logoutAll: true };
+      mockReq.user = {
+        id: mockUser.id,
+        email: mockUser.email,
+        role: mockUser.role,
+        name: mockUser.name,
+        avatarUrl: mockUser.avatarUrl,
+        emailVerified: mockUser.emailVerified,
+        createdAt: mockUser.createdAt,
+        subscription: null,
+      };
+      vi.mocked(authService.invalidateAllUserTokens).mockResolvedValue();
+
+      await logout(
+        mockReq as unknown as Request,
+        mockRes as unknown as Response,
+        mockNext as NextFunction
+      );
+
+      expect(authService.invalidateAllUserTokens).toHaveBeenCalledWith(mockUser.id);
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Successfully logged out from all sessions',
+      });
+    });
+
+    /**
+     * Test: Successful logout without refresh token (client-side only)
+     */
+    it('succeeds even without refresh token', async () => {
+      mockReq.body = {};
+      mockReq.user = {
+        id: mockUser.id,
+        email: mockUser.email,
+        role: mockUser.role,
+        name: mockUser.name,
+        avatarUrl: mockUser.avatarUrl,
+        emailVerified: mockUser.emailVerified,
+        createdAt: mockUser.createdAt,
+        subscription: null,
+      };
+
+      await logout(
+        mockReq as unknown as Request,
+        mockRes as unknown as Response,
+        mockNext as NextFunction
+      );
+
+      expect(authService.invalidateRefreshToken).not.toHaveBeenCalled();
+      expect(authService.invalidateAllUserTokens).not.toHaveBeenCalled();
+      expect(mockRes.status).toHaveBeenCalledWith(200);
+      expect(mockRes.json).toHaveBeenCalledWith({
+        success: true,
+        message: 'Successfully logged out',
+      });
+    });
+
+    /**
+     * Test: Tracks logout analytics event
+     */
+    it('tracks logout analytics event', async () => {
+      mockReq.body = { refreshToken: 'mock-refresh-token' };
+      mockReq.user = {
+        id: mockUser.id,
+        email: mockUser.email,
+        role: mockUser.role,
+        name: mockUser.name,
+        avatarUrl: mockUser.avatarUrl,
+        emailVerified: mockUser.emailVerified,
+        createdAt: mockUser.createdAt,
+        subscription: null,
+      };
+      vi.mocked(authService.invalidateRefreshToken).mockResolvedValue();
+
+      await logout(
+        mockReq as unknown as Request,
+        mockRes as unknown as Response,
+        mockNext as NextFunction
+      );
+
+      expect(authService.trackAuthEvent).toHaveBeenCalledWith(
+        authService.AUTH_EVENTS.LOGOUT_COMPLETED,
+        expect.objectContaining({
+          userId: mockUser.id,
+          logoutAll: false,
+          method: 'api',
+        })
+      );
+    });
+
+    /**
+     * Test: Handles service errors gracefully
+     */
+    it('passes error to next when service throws', async () => {
+      mockReq.body = { refreshToken: 'mock-refresh-token' };
+      mockReq.user = {
+        id: mockUser.id,
+        email: mockUser.email,
+        role: mockUser.role,
+        name: mockUser.name,
+        avatarUrl: mockUser.avatarUrl,
+        emailVerified: mockUser.emailVerified,
+        createdAt: mockUser.createdAt,
+        subscription: null,
+      };
+      const serviceError = new Error('Database connection failed');
+      vi.mocked(authService.invalidateRefreshToken).mockRejectedValue(serviceError);
+
+      await logout(
         mockReq as unknown as Request,
         mockRes as unknown as Response,
         mockNext as NextFunction
