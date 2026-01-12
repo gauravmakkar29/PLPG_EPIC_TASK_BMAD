@@ -42,3 +42,20 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/**
+ * Password reset rate limiter.
+ * Limits to 3 requests per IP per hour for password reset endpoints.
+ * This helps prevent abuse while still allowing legitimate forgot password requests.
+ */
+export const passwordResetRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Limit each IP to 3 requests per hour
+  message: {
+    error: 'Too many password reset requests',
+    message: 'You have exceeded the limit for password reset requests. Please try again after 1 hour.',
+    retryAfter: 60 * 60,
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

@@ -35,6 +35,16 @@ const envSchema = z.object({
 
   // Trial configuration
   TRIAL_DURATION_DAYS: z.string().default('14'),
+
+  // SMTP configuration for email
+  SMTP_HOST: z.string().default('localhost'),
+  SMTP_PORT: z.string().default('1025'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().email().default('noreply@plpg.dev'),
+
+  // Frontend URL for reset links
+  FRONTEND_URL: z.string().url().default('http://localhost:5173'),
 });
 
 /**
@@ -62,6 +72,10 @@ function parseEnv(): Env {
           JWT_REFRESH_SECRET:
             process.env['JWT_REFRESH_SECRET'] ||
             'test-jwt-refresh-secret-at-least-32-characters-long',
+          SMTP_FROM:
+            process.env['SMTP_FROM'] || 'noreply@test.plpg.dev',
+          FRONTEND_URL:
+            process.env['FRONTEND_URL'] || 'http://localhost:5173',
         }
       : {};
 

@@ -12,6 +12,8 @@ import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import { SignIn } from './pages/SignIn';
 import { SignUp } from './pages/SignUp';
+import { ForgotPassword } from './pages/ForgotPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { Settings } from './pages/Settings';
 import { ProfilePage } from './pages/Settings/Profile';
 
@@ -33,6 +35,8 @@ export function App(): JSX.Element {
         <Route element={<SignIn />} path="/sign-in" />
         <Route element={<SignUp />} path="/signup" />
         <Route element={<SignUp />} path="/sign-up" />
+        <Route element={<ForgotPassword />} path="/forgot-password" />
+        <Route element={<ResetPassword />} path="/reset-password/:token" />
         {/* Onboarding routes - to be implemented in Epic 2 */}
         <Route
           element={<div>Onboarding - Coming Soon</div>}

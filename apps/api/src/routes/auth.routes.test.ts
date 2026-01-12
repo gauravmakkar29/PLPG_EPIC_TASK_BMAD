@@ -44,6 +44,11 @@ vi.mock('../middleware/rateLimiter.middleware', () => ({
     _res: express.Response,
     next: express.NextFunction
   ) => next(),
+  passwordResetRateLimiter: (
+    _req: express.Request,
+    _res: express.Response,
+    next: express.NextFunction
+  ) => next(),
 }));
 
 vi.mock('../lib/env', () => ({

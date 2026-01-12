@@ -21,3 +21,24 @@ export {
   type RegisterResult,
   type SessionResponse,
 } from './auth.service';
+
+export {
+  sendEmail,
+  sendPasswordResetEmail,
+  emailService,
+  closeEmailTransporter,
+  type EmailOptions,
+  type EmailResult,
+  type IEmailService,
+} from './email.service';
+
+export {
+  requestPasswordReset,
+  validateResetToken,
+  resetPassword,
+  cleanupExpiredTokens,
+  passwordResetService,
+  type ForgotPasswordResult,
+  type ResetPasswordResult,
+  type IPasswordResetService,
+} from './passwordReset.service';
