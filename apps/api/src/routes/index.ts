@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { healthRoutes } from './health.routes';
 import { authRoutes } from './auth.routes';
+import { userRoutes } from './user.routes';
 
 const router = Router();
 
@@ -16,6 +17,9 @@ router.use('/health', healthRoutes);
 
 // Authentication routes
 router.use('/auth', authRoutes);
+
+// User profile routes
+router.use('/users', userRoutes);
 
 // Future route modules will be added here:
 // router.use('/onboarding', onboardingRoutes);

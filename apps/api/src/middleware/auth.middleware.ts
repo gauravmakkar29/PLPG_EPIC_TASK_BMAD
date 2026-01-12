@@ -120,7 +120,9 @@ async function fetchUserWithSubscription(
     email: user.email,
     role: user.role,
     name: user.name,
+    avatarUrl: user.avatarUrl,
     emailVerified: user.emailVerified,
+    createdAt: user.createdAt,
     subscription,
   };
 }

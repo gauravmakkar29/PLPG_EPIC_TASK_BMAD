@@ -12,6 +12,8 @@ import { Landing } from './pages/Landing';
 import { NotFound } from './pages/NotFound';
 import { SignIn } from './pages/SignIn';
 import { SignUp } from './pages/SignUp';
+import { Settings } from './pages/Settings';
+import { ProfilePage } from './pages/Settings/Profile';
 
 import type { JSX } from 'react';
 
@@ -38,8 +40,9 @@ export function App(): JSX.Element {
         />
         {/* Dashboard routes - to be implemented in Epic 4 */}
         <Route element={<div>Dashboard - Coming Soon</div>} path="/dashboard" />
-        {/* Settings routes - to be implemented in Epic 5 */}
-        <Route element={<div>Settings - Coming Soon</div>} path="/settings" />
+        {/* Settings routes */}
+        <Route element={<Settings />} path="/settings" />
+        <Route element={<ProfilePage />} path="/settings/profile" />
         {/* 404 fallback */}
         <Route element={<NotFound />} path="*" />
       </Routes>
