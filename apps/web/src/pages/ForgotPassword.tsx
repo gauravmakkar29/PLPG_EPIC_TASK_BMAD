@@ -105,7 +105,10 @@ export function ForgotPassword(): JSX.Element {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
     if (errors.general) {
-      setErrors((prev) => ({ ...prev, general: undefined }));
+      setErrors((prev) => {
+        const { general: _, ...rest } = prev;
+        return rest;
+      });
     }
   };
 
