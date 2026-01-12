@@ -51,11 +51,13 @@ export {
   onboardingStep3Schema,
   onboardingStep4Schema,
   completeOnboardingSchema,
+  updatePreferencesSchema,
   type OnboardingStep1Input,
   type OnboardingStep2Input,
   type OnboardingStep3Input,
   type OnboardingStep4Input,
   type CompleteOnboardingInput,
+  type UpdatePreferencesInput,
 } from './onboarding.schema';
 
 // Progress validation schemas

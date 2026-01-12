@@ -17,8 +17,8 @@
  */
 
 import { Router } from 'express';
-import { onboardingStep1Schema, onboardingStep4Schema } from '@plpg/shared/validation';
-import { getStatus, saveStep1Handler, saveStep4Handler } from '../controllers/onboarding.controller';
+import { onboardingStep1Schema, onboardingStep4Schema, updatePreferencesSchema } from '@plpg/shared/validation';
+import { getStatus, saveStep1Handler, saveStep4Handler, completeHandler, updatePreferencesHandler } from '../controllers/onboarding.controller';
 import { validate } from '../middleware/validate.middleware';
 import { jwtMiddleware, requireAuth } from '../middleware/auth.middleware';
 
@@ -140,7 +140,84 @@ router.patch(
 // Future endpoints for remaining steps will be added here:
 // router.patch('/step/2', jwtMiddleware, requireAuth, validate({ body: onboardingStep2Schema }), saveStep2Handler);
 // router.patch('/step/3', jwtMiddleware, requireAuth, validate({ body: onboardingStep3Schema }), saveStep3Handler);
-// router.post('/complete', jwtMiddleware, requireAuth, validate({ body: completeOnboardingSchema }), completeHandler);
+
+/**
+ * Complete Onboarding Endpoint
+ *
+ * @route POST /api/v1/onboarding/complete
+ * @description Marks onboarding as complete and triggers roadmap generation.
+ * Validates that all required steps are completed before processing.
+ *
+ * @requirements
+ * - AIRE-238: Story 2.6 - Onboarding Completion
+ * - Generate My Path button triggers roadmap generation (E3)
+ * - Loading state during generation (<3s target)
+ * - Success redirects to Path Preview (E4)
+ *
+ * @header Authorization - Bearer token (required)
+ *
+ * @response 200 - Success
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "onboardingResponse": OnboardingResponse,
+ *     "roadmapId": string | null
+ *   }
+ * }
+ *
+ * @response 400 - Validation Error (missing required steps)
+ * @response 401 - Unauthorized
+ * @response 500 - Internal Server Error
+ */
+router.post('/complete', jwtMiddleware, requireAuth, completeHandler);
+
+/**
+ * Update Preferences Endpoint
+ *
+ * @route PUT /api/v1/onboarding/preferences
+ * @description Updates all onboarding preferences for an existing user.
+ * Triggers roadmap regeneration while preserving progress for matching modules.
+ * This is used for re-onboarding when a user wants to modify their learning path.
+ *
+ * @requirements
+ * - AIRE-239: Story 2.7 - Re-Onboarding / Edit Preferences
+ * - Pre-filled with current selections
+ * - Warning: Changing preferences will regenerate your roadmap
+ * - Confirmation before overwriting
+ * - New roadmap generated; old progress retained where applicable
+ *
+ * @header Authorization - Bearer token (required)
+ *
+ * @body {string} currentRole - One of: 'backend_developer', 'devops_engineer',
+ *                              'data_analyst', 'qa_engineer', 'it_professional', 'other'
+ * @body {string} [customRoleText] - Required when currentRole is 'other' (2-100 chars)
+ * @body {string} targetRole - One of: 'ml_engineer', 'data_scientist', 'mlops_engineer', 'ai_engineer'
+ * @body {number} weeklyHours - Weekly hours commitment (5-20)
+ * @body {string[]} skillsToSkip - Array of skill UUIDs to skip
+ *
+ * @response 200 - Success
+ * {
+ *   "success": true,
+ *   "data": {
+ *     "onboardingResponse": OnboardingResponse,
+ *     "roadmapRegenerated": boolean,
+ *     "newRoadmapId": string | null,
+ *     "preservedModulesCount": number
+ *   }
+ * }
+ *
+ * @response 400 - Validation Error (invalid input)
+ * @response 401 - Unauthorized
+ * @response 404 - Onboarding not found
+ * @response 500 - Internal Server Error
+ */
+router.put(
+  '/preferences',
+  jwtMiddleware,
+  requireAuth,
+  validate({ body: updatePreferencesSchema }),
+  updatePreferencesHandler
+);
 
 export const onboardingRoutes = router;
 export default router;

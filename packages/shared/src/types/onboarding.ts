@@ -135,3 +135,42 @@ export interface OnboardingStatus {
   totalSteps: number;
   response: OnboardingResponse | null;
 }
+
+/**
+ * Update preferences input for re-onboarding.
+ *
+ * @interface UpdatePreferencesInput
+ * @description Input for updating user's onboarding preferences.
+ * Used when an existing user wants to modify their learning path preferences.
+ *
+ * @property {CurrentRole} currentRole - User's updated current role
+ * @property {string} [customRoleText] - Custom role description when 'other' is selected
+ * @property {TargetRole} targetRole - User's updated target career role
+ * @property {WeeklyHoursOption} weeklyHours - Updated weekly time commitment
+ * @property {string[]} skillsToSkip - Updated array of skill IDs to exclude
+ */
+export interface UpdatePreferencesInput {
+  currentRole: CurrentRole;
+  customRoleText?: string;
+  targetRole: TargetRole;
+  weeklyHours: WeeklyHoursOption;
+  skillsToSkip: string[];
+}
+
+/**
+ * Result of updating preferences.
+ *
+ * @interface UpdatePreferencesResult
+ * @description Contains the updated onboarding response and regeneration status.
+ *
+ * @property {OnboardingResponse} onboardingResponse - Updated onboarding data
+ * @property {boolean} roadmapRegenerated - Whether a new roadmap was generated
+ * @property {string | null} newRoadmapId - ID of the new roadmap if regenerated
+ * @property {number} preservedModulesCount - Count of modules with preserved progress
+ */
+export interface UpdatePreferencesResult {
+  onboardingResponse: OnboardingResponse;
+  roadmapRegenerated: boolean;
+  newRoadmapId: string | null;
+  preservedModulesCount: number;
+}

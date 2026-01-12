@@ -14,8 +14,12 @@
  *
  * @requirements
  * - AIRE-234: Story 2.2 - Step 1 Current Role Selection
+ * - AIRE-238: Story 2.6 - Onboarding Completion
  * - Selection saved immediately (no data loss on navigation)
  * - Next button enabled only after selection
+ * - Summary screen showing all selections
+ * - Generate My Path button triggers roadmap generation
+ * - Success redirects to Path Preview
  *
  * @example
  * ```tsx
@@ -23,14 +27,27 @@
  * ```
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { JSX } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
-import { Step1CurrentRole } from '../components/onboarding';
-import type { OnboardingStep1Data } from '@plpg/shared';
+import { Step1CurrentRole, Step5Summary } from '../components/onboarding';
+import type { OnboardingSummaryData } from '../components/onboarding';
+import type {
+  OnboardingStep1Data,
+  OnboardingStep2Data,
+  OnboardingStep3Data,
+  OnboardingStep4Data,
+} from '@plpg/shared';
+
+/**
+ * API base URL for onboarding endpoints.
+ *
+ * @constant API_BASE_URL
+ */
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1';
 
 /**
  * Total number of steps in the onboarding flow.
@@ -130,12 +147,13 @@ function ProgressIndicator({
  * - Step 2: Target Role Selection (placeholder)
  * - Step 3: Weekly Hours Commitment (placeholder)
  * - Step 4: Skills Assessment (placeholder)
- * - Step 5: Summary & Confirmation (placeholder)
+ * - Step 5: Summary & Confirmation
  *
  * Features:
  * - Auto-save on selection changes
  * - Progress indicator
  * - Navigation between steps
+ * - Edit functionality from summary
  * - Authentication check (redirect to sign-in if not authenticated)
  *
  * @returns {JSX.Element} Onboarding page component
@@ -144,7 +162,7 @@ function ProgressIndicator({
  */
 export function Onboarding(): JSX.Element {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, token } = useAuth();
 
   // Onboarding state management
   const {
@@ -161,6 +179,21 @@ export function Onboarding(): JSX.Element {
   // Local state for current step display
   const [displayStep, setDisplayStep] = useState(currentStep);
 
+  // Local state for step data (steps 2-4 are placeholders, using mock data)
+  const [step2Data, setStep2Data] = useState<OnboardingStep2Data | null>({
+    targetRole: 'ml_engineer',
+  });
+  const [step3Data, setStep3Data] = useState<OnboardingStep3Data | null>({
+    weeklyHours: 10,
+  });
+  const [step4Data, setStep4Data] = useState<OnboardingStep4Data | null>({
+    skillsToSkip: [],
+  });
+
+  // State for path generation
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
   // Redirect to sign-in if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -172,6 +205,19 @@ export function Onboarding(): JSX.Element {
   useEffect(() => {
     setDisplayStep(currentStep);
   }, [currentStep]);
+
+  /**
+   * Memoized summary data for Step 5.
+   */
+  const summaryData = useMemo<OnboardingSummaryData>(
+    () => ({
+      step1: step1Data,
+      step2: step2Data,
+      step3: step3Data,
+      step4: step4Data,
+    }),
+    [step1Data, step2Data, step3Data, step4Data]
+  );
 
   /**
    * Handles step 1 selection change.
@@ -199,6 +245,56 @@ export function Onboarding(): JSX.Element {
   const handleBack = useCallback((): void => {
     goToPreviousStep();
   }, [goToPreviousStep]);
+
+  /**
+   * Handles navigation to a specific step (for edit functionality).
+   *
+   * @param {number} step - Step number to navigate to
+   */
+  const handleGoToStep = useCallback((step: number): void => {
+    if (step >= 1 && step <= TOTAL_STEPS) {
+      setDisplayStep(step);
+    }
+  }, []);
+
+  /**
+   * Handles Generate My Path button click.
+   * Calls the completion API and redirects on success.
+   */
+  const handleGeneratePath = useCallback(async (): Promise<void> => {
+    if (!token) {
+      setGenerateError('Authentication required. Please sign in again.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerateError(null);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/onboarding/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        // Success - redirect to dashboard/path preview
+        navigate('/dashboard', { replace: true });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setGenerateError(
+          errorData.message || 'Failed to generate your learning path. Please try again.'
+        );
+      }
+    } catch (err) {
+      console.error('Error generating path:', err);
+      setGenerateError('Unable to connect to server. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [token, navigate]);
 
   // Show loading state while checking authentication
   if (authLoading) {
@@ -272,23 +368,16 @@ export function Onboarding(): JSX.Element {
           </div>
         );
       case 5:
-        // Placeholder for Step 5 - Summary
+        // Step 5 - Summary & Confirmation
         return (
-          <div className="step-placeholder" data-testid="step-5-placeholder">
-            <h2>Step 5: Summary</h2>
-            <p>Coming soon...</p>
-            <div className="step-navigation">
-              <button onClick={handleBack} className="btn btn--secondary">
-                Back
-              </button>
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="btn btn--primary"
-              >
-                Complete
-              </button>
-            </div>
-          </div>
+          <Step5Summary
+            summaryData={summaryData}
+            onEditStep={handleGoToStep}
+            onGeneratePath={handleGeneratePath}
+            onBack={handleBack}
+            isGenerating={isGenerating}
+            error={generateError}
+          />
         );
       default:
         return <div>Unknown step</div>;

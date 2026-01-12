@@ -68,6 +68,7 @@ export interface OnboardingData {
  * @property {OnboardingData} data - Collected onboarding data
  * @property {boolean} isComplete - Whether onboarding is complete
  * @property {boolean} isLoading - Loading state for API calls
+ * @property {boolean} isEditMode - Whether in edit/re-onboarding mode
  * @property {OnboardingStatus | null} status - Server-side onboarding status
  * @property {Function} setCurrentRole - Set step 1 data
  * @property {Function} setTargetRole - Set step 2 data
@@ -78,6 +79,8 @@ export interface OnboardingData {
  * @property {Function} previousStep - Go back to previous step
  * @property {Function} resetOnboarding - Clear all onboarding progress
  * @property {Function} completeOnboarding - Submit onboarding data
+ * @property {Function} initializeWithData - Initialize with existing data for edit mode
+ * @property {Function} setEditMode - Enable/disable edit mode
  */
 export interface OnboardingContextValue {
   currentStep: number;
@@ -85,6 +88,7 @@ export interface OnboardingContextValue {
   data: OnboardingData;
   isComplete: boolean;
   isLoading: boolean;
+  isEditMode: boolean;
   status: OnboardingStatus | null;
   setCurrentRole: (role: CurrentRole) => void;
   setTargetRole: (role: TargetRole) => void;
@@ -95,6 +99,8 @@ export interface OnboardingContextValue {
   previousStep: () => void;
   resetOnboarding: () => void;
   completeOnboarding: () => Promise<void>;
+  initializeWithData: (data: OnboardingData) => void;
+  setEditMode: (enabled: boolean) => void;
 }
 
 /**
@@ -217,16 +223,18 @@ export function OnboardingProvider({
   );
   const [isComplete, setIsComplete] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
 
   /**
    * Persist progress to localStorage whenever it changes.
+   * Skip persistence in edit mode to preserve original data.
    */
   useEffect(() => {
-    if (!isComplete) {
+    if (!isComplete && !isEditMode) {
       saveProgress(currentStep, data);
     }
-  }, [currentStep, data, isComplete]);
+  }, [currentStep, data, isComplete, isEditMode]);
 
   /**
    * Sets the current role (step 1).
@@ -298,8 +306,36 @@ export function OnboardingProvider({
     setCurrentStep(1);
     setData(INITIAL_DATA);
     setIsComplete(false);
+    setIsEditMode(false);
     setStatus(null);
     clearSavedProgress();
+  }, []);
+
+  /**
+   * Initializes the onboarding context with existing data.
+   * Used for re-onboarding / edit preferences flow.
+   *
+   * @param {OnboardingData} existingData - The existing onboarding data to pre-fill
+   *
+   * @requirements
+   * - AIRE-239: Story 2.7 - Pre-filled with current selections
+   */
+  const initializeWithData = useCallback((existingData: OnboardingData): void => {
+    setData(existingData);
+    setCurrentStep(1);
+    setIsEditMode(true);
+    setIsComplete(false);
+    // Don't save to localStorage when in edit mode - we don't want to overwrite
+    // the user's original progress if they cancel
+  }, []);
+
+  /**
+   * Enables or disables edit mode.
+   *
+   * @param {boolean} enabled - Whether to enable edit mode
+   */
+  const handleSetEditMode = useCallback((enabled: boolean): void => {
+    setIsEditMode(enabled);
   }, []);
 
   /**
@@ -354,6 +390,7 @@ export function OnboardingProvider({
       data,
       isComplete,
       isLoading,
+      isEditMode,
       status,
       setCurrentRole,
       setTargetRole,
@@ -364,12 +401,15 @@ export function OnboardingProvider({
       previousStep,
       resetOnboarding,
       completeOnboarding,
+      initializeWithData,
+      setEditMode: handleSetEditMode,
     }),
     [
       currentStep,
       data,
       isComplete,
       isLoading,
+      isEditMode,
       status,
       setCurrentRole,
       setTargetRole,
@@ -380,6 +420,8 @@ export function OnboardingProvider({
       previousStep,
       resetOnboarding,
       completeOnboarding,
+      initializeWithData,
+      handleSetEditMode,
     ]
   );
 

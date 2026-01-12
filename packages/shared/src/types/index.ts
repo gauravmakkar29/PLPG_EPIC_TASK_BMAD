@@ -45,6 +45,8 @@ export type {
   OnboardingStep4Data,
   CompleteOnboardingInput,
   OnboardingStatus,
+  UpdatePreferencesInput,
+  UpdatePreferencesResult,
 } from './onboarding';
 
 // Skill types

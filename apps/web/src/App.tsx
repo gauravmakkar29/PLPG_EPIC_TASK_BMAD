@@ -17,6 +17,7 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Onboarding } from './pages/Onboarding';
 import { Settings } from './pages/Settings';
 import { ProfilePage } from './pages/Settings/Profile';
+import { EditPreferencesPage } from './pages/Settings/EditPreferences';
 
 import type { JSX } from 'react';
 
@@ -46,6 +47,7 @@ export function App(): JSX.Element {
         {/* Settings routes */}
         <Route element={<Settings />} path="/settings" />
         <Route element={<ProfilePage />} path="/settings/profile" />
+        <Route element={<EditPreferencesPage />} path="/settings/preferences" />
         {/* 404 fallback */}
         <Route element={<NotFound />} path="*" />
       </Routes>

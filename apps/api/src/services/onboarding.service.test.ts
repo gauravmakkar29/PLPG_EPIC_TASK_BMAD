@@ -16,6 +16,7 @@ import {
   saveStep4,
   hasCompletedOnboarding,
   getOnboardingByUserId,
+  updatePreferences,
 } from './onboarding.service';
 
 // Mock prisma
@@ -512,6 +513,244 @@ describe('onboarding.service', () => {
       expect(result.targetRole).toBe('data_scientist');
       expect(result.weeklyHours).toBe(15);
       expect(result.skillsToSkip).toEqual(['skill-1']);
+    });
+  });
+
+  /**
+   * Tests for updatePreferences
+   *
+   * @requirements
+   * - AIRE-239: Story 2.7 - Re-Onboarding / Edit Preferences
+   * - Pre-filled with current selections
+   * - New roadmap generated on confirmation
+   * - Existing progress retained for matching modules
+   */
+  describe('updatePreferences', () => {
+    const completedOnboarding = {
+      id: 'onboarding-123',
+      userId: 'user-123',
+      currentRole: 'backend_developer',
+      customRoleText: null,
+      targetRole: 'ml_engineer',
+      weeklyHours: 10,
+      skillsToSkip: ['skill-1'],
+      completedAt: new Date('2024-01-10'),
+      createdAt: new Date('2024-01-01'),
+      updatedAt: new Date('2024-01-10'),
+    };
+
+    it('should update all preferences when onboarding is complete', async () => {
+      mockFindUnique.mockResolvedValue(completedOnboarding);
+
+      const updatedResponse = {
+        ...completedOnboarding,
+        currentRole: 'data_analyst',
+        targetRole: 'data_scientist',
+        weeklyHours: 15,
+        skillsToSkip: ['skill-2', 'skill-3'],
+        updatedAt: new Date('2024-01-15'),
+      };
+
+      mockUpdate.mockResolvedValue(updatedResponse);
+
+      const result = await updatePreferences('user-123', {
+        currentRole: 'data_analyst',
+        targetRole: 'data_scientist',
+        weeklyHours: 15,
+        skillsToSkip: ['skill-2', 'skill-3'],
+      });
+
+      expect(result.onboardingResponse.currentRole).toBe('data_analyst');
+      expect(result.onboardingResponse.targetRole).toBe('data_scientist');
+      expect(result.onboardingResponse.weeklyHours).toBe(15);
+      expect(result.onboardingResponse.skillsToSkip).toEqual(['skill-2', 'skill-3']);
+      expect(result.roadmapRegenerated).toBe(true);
+    });
+
+    it('should throw error when onboarding does not exist', async () => {
+      mockFindUnique.mockResolvedValue(null);
+
+      await expect(
+        updatePreferences('user-123', {
+          currentRole: 'backend_developer',
+          targetRole: 'ml_engineer',
+          weeklyHours: 10,
+          skillsToSkip: [],
+        })
+      ).rejects.toThrow('Onboarding not found. Please complete onboarding first.');
+    });
+
+    it('should throw error when onboarding is not completed', async () => {
+      mockFindUnique.mockResolvedValue({
+        ...completedOnboarding,
+        completedAt: null,
+      });
+
+      await expect(
+        updatePreferences('user-123', {
+          currentRole: 'backend_developer',
+          targetRole: 'ml_engineer',
+          weeklyHours: 10,
+          skillsToSkip: [],
+        })
+      ).rejects.toThrow('Onboarding not completed. Please complete onboarding first.');
+    });
+
+    it('should throw error for invalid role', async () => {
+      mockFindUnique.mockResolvedValue(completedOnboarding);
+
+      await expect(
+        updatePreferences('user-123', {
+          currentRole: 'invalid_role' as any,
+          targetRole: 'ml_engineer',
+          weeklyHours: 10,
+          skillsToSkip: [],
+        })
+      ).rejects.toThrow('Invalid current role: invalid_role');
+    });
+
+    it('should save custom role text when other is selected', async () => {
+      mockFindUnique.mockResolvedValue(completedOnboarding);
+
+      const updatedResponse = {
+        ...completedOnboarding,
+        currentRole: 'other',
+        customRoleText: 'Product Manager',
+        updatedAt: new Date('2024-01-15'),
+      };
+
+      mockUpdate.mockResolvedValue(updatedResponse);
+
+      const result = await updatePreferences('user-123', {
+        currentRole: 'other',
+        customRoleText: 'Product Manager',
+        targetRole: 'ml_engineer',
+        weeklyHours: 10,
+        skillsToSkip: [],
+      });
+
+      expect(result.onboardingResponse.currentRole).toBe('other');
+      expect(result.onboardingResponse.customRoleText).toBe('Product Manager');
+    });
+
+    it('should throw error when other is selected without custom text', async () => {
+      mockFindUnique.mockResolvedValue(completedOnboarding);
+
+      await expect(
+        updatePreferences('user-123', {
+          currentRole: 'other',
+          targetRole: 'ml_engineer',
+          weeklyHours: 10,
+          skillsToSkip: [],
+        })
+      ).rejects.toThrow('Custom role text is required when selecting "Other"');
+    });
+
+    it('should clear custom role text when switching from other to predefined role', async () => {
+      mockFindUnique.mockResolvedValue({
+        ...completedOnboarding,
+        currentRole: 'other',
+        customRoleText: 'Old Custom Role',
+      });
+
+      const updatedResponse = {
+        ...completedOnboarding,
+        currentRole: 'qa_engineer',
+        customRoleText: null,
+        updatedAt: new Date('2024-01-15'),
+      };
+
+      mockUpdate.mockResolvedValue(updatedResponse);
+
+      const result = await updatePreferences('user-123', {
+        currentRole: 'qa_engineer',
+        targetRole: 'ml_engineer',
+        weeklyHours: 10,
+        skillsToSkip: [],
+      });
+
+      expect(result.onboardingResponse.currentRole).toBe('qa_engineer');
+      expect(result.onboardingResponse.customRoleText).toBeNull();
+
+      // Verify the update was called with null for customRoleText
+      expect(mockUpdate).toHaveBeenCalledWith({
+        where: { userId: 'user-123' },
+        data: expect.objectContaining({
+          customRoleText: null,
+        }),
+      });
+    });
+
+    it('should return preservedModulesCount in result', async () => {
+      mockFindUnique.mockResolvedValue(completedOnboarding);
+
+      const updatedResponse = {
+        ...completedOnboarding,
+        updatedAt: new Date('2024-01-15'),
+      };
+
+      mockUpdate.mockResolvedValue(updatedResponse);
+
+      const result = await updatePreferences('user-123', {
+        currentRole: 'backend_developer',
+        targetRole: 'ml_engineer',
+        weeklyHours: 10,
+        skillsToSkip: [],
+      });
+
+      expect(result).toHaveProperty('preservedModulesCount');
+      expect(typeof result.preservedModulesCount).toBe('number');
+    });
+
+    it('should accept all valid target roles', async () => {
+      const validTargetRoles = [
+        'ml_engineer',
+        'data_scientist',
+        'mlops_engineer',
+        'ai_engineer',
+      ];
+
+      for (const targetRole of validTargetRoles) {
+        mockFindUnique.mockResolvedValue(completedOnboarding);
+
+        const updatedResponse = {
+          ...completedOnboarding,
+          targetRole,
+          updatedAt: new Date('2024-01-15'),
+        };
+
+        mockUpdate.mockResolvedValue(updatedResponse);
+
+        const result = await updatePreferences('user-123', {
+          currentRole: 'backend_developer',
+          targetRole: targetRole as any,
+          weeklyHours: 10,
+          skillsToSkip: [],
+        });
+
+        expect(result.onboardingResponse.targetRole).toBe(targetRole);
+      }
+    });
+
+    it('should update weeklyHours within valid range', async () => {
+      mockFindUnique.mockResolvedValue(completedOnboarding);
+
+      const updatedResponse = {
+        ...completedOnboarding,
+        weeklyHours: 20,
+        updatedAt: new Date('2024-01-15'),
+      };
+
+      mockUpdate.mockResolvedValue(updatedResponse);
+
+      const result = await updatePreferences('user-123', {
+        currentRole: 'backend_developer',
+        targetRole: 'ml_engineer',
+        weeklyHours: 20,
+        skillsToSkip: [],
+      });
+
+      expect(result.onboardingResponse.weeklyHours).toBe(20);
     });
   });
 });

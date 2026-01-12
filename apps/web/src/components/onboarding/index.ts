@@ -24,5 +24,16 @@ export {
   calculateTimeSaved,
   formatTimeSaved,
 } from './Step4ExistingSkills';
+export { Step5Summary } from './Step5Summary';
+export type { Step5SummaryProps, OnboardingSummaryData } from './Step5Summary';
+export {
+  getCurrentRoleDisplayName,
+  getTargetRoleDisplayName,
+  getWeeklyHoursDisplayText,
+  getSkillsToSkipDisplayText,
+  getSkillNamesToSkip,
+  getEstimatedCompletionText,
+  validateSummaryData,
+} from './Step5Summary';
 export { OnboardingWelcome } from './OnboardingWelcome';
 export type { OnboardingWelcomeProps } from './OnboardingWelcome';

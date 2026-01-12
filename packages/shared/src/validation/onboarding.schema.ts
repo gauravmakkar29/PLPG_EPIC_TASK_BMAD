@@ -197,9 +197,45 @@ export const completeOnboardingSchema = z.object({
   skillsToSkip: skillsToSkipSchema,
 });
 
+/**
+ * Update preferences validation schema.
+ * Used for re-onboarding / editing preferences after initial onboarding.
+ *
+ * @schema updatePreferencesSchema
+ * @description Validates the complete preferences update request.
+ * Includes all onboarding fields plus custom role validation.
+ *
+ * @requirements
+ * - AIRE-239: Story 2.7 - Re-Onboarding / Edit Preferences
+ * - All fields required for preference update
+ * - Custom role text required when 'other' is selected
+ */
+export const updatePreferencesSchema = z
+  .object({
+    currentRole: currentRoleSchema,
+    customRoleText: customRoleTextSchema,
+    targetRole: targetRoleSchema,
+    weeklyHours: weeklyHoursNumberSchema,
+    skillsToSkip: skillsToSkipSchema,
+  })
+  .refine(
+    (data) => {
+      // If 'other' is selected, customRoleText must be provided
+      if (data.currentRole === 'other') {
+        return data.customRoleText && data.customRoleText.trim().length >= 2;
+      }
+      return true;
+    },
+    {
+      message: 'Please specify your role when selecting "Other"',
+      path: ['customRoleText'],
+    }
+  );
+
 // Type exports inferred from schemas
 export type OnboardingStep1Input = z.infer<typeof onboardingStep1Schema>;
 export type OnboardingStep2Input = z.infer<typeof onboardingStep2Schema>;
 export type OnboardingStep3Input = z.infer<typeof onboardingStep3Schema>;
 export type OnboardingStep4Input = z.infer<typeof onboardingStep4Schema>;
 export type CompleteOnboardingInput = z.infer<typeof completeOnboardingSchema>;
+export type UpdatePreferencesInput = z.infer<typeof updatePreferencesSchema>;

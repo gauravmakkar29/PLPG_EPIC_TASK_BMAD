@@ -29,6 +29,9 @@ interface SettingsMenuItem {
 
 /**
  * Settings menu items configuration.
+ *
+ * @requirements
+ * - AIRE-239: Story 2.7 - Edit Preferences accessible from Settings
  */
 const settingsMenuItems: SettingsMenuItem[] = [
   {
@@ -36,6 +39,12 @@ const settingsMenuItems: SettingsMenuItem[] = [
     description: 'Manage your display name and profile information',
     path: '/settings/profile',
     icon: 'U',
+  },
+  {
+    title: 'Learning Preferences',
+    description: 'Update your target role, weekly hours, and skills',
+    path: '/settings/preferences',
+    icon: 'P',
   },
   {
     title: 'Subscription & Billing',
