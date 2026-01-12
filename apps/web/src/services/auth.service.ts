@@ -298,6 +298,47 @@ export async function resetPassword(
 }
 
 /**
+ * Validate reset token response structure.
+ *
+ * @interface ValidateResetTokenResponse
+ * @property {boolean} valid - Whether the token is valid
+ */
+export interface ValidateResetTokenResponse {
+  valid: boolean;
+}
+
+/**
+ * Validates a password reset token without consuming it.
+ * Used to check if a token is valid before showing the reset form.
+ *
+ * @param {string} token - Reset token from URL
+ * @returns {Promise<ValidateResetTokenResponse>} Validation result
+ *
+ * @throws {Error} Network error
+ *
+ * @example
+ * ```typescript
+ * const { valid } = await validateResetToken('reset-token-from-url');
+ * if (!valid) {
+ *   // Redirect to forgot password page with error
+ * }
+ * ```
+ */
+export async function validateResetToken(
+  token: string
+): Promise<ValidateResetTokenResponse> {
+  try {
+    const response = await api.get<ValidateResetTokenResponse>(
+      `/auth/validate-reset-token/${token}`
+    );
+    return response.data;
+  } catch (error) {
+    const errorMessage = getErrorMessage(error);
+    throw new Error(errorMessage);
+  }
+}
+
+/**
  * Changes user's password (requires current password).
  * User must be authenticated.
  *
