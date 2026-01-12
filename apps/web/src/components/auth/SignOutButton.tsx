@@ -218,7 +218,7 @@ export function SignOutButton({
     'focus:outline-none focus:ring-2 focus:ring-offset-2',
     'transition-colors duration-200',
     'disabled:opacity-50 disabled:cursor-not-allowed',
-    variantStyles[variant] || variantStyles.default,
+    variantStyles[variant] || variantStyles['default'],
     variant !== 'link' ? sizeStyles[size] : '',
     className,
   ]

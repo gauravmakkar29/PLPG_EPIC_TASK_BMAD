@@ -14,9 +14,9 @@ import { SignIn } from './pages/SignIn';
 import { SignUp } from './pages/SignUp';
 import { ForgotPassword } from './pages/ForgotPassword';
 import { ResetPassword } from './pages/ResetPassword';
+import { Onboarding } from './pages/Onboarding';
 import { Settings } from './pages/Settings';
 import { ProfilePage } from './pages/Settings/Profile';
-import { Onboarding } from './pages/Onboarding';
 
 import type { JSX } from 'react';
 
@@ -38,8 +38,9 @@ export function App(): JSX.Element {
         <Route element={<SignUp />} path="/sign-up" />
         <Route element={<ForgotPassword />} path="/forgot-password" />
         <Route element={<ResetPassword />} path="/reset-password/:token" />
-        {/* Onboarding routes - AIRE-234 */}
+        {/* Onboarding routes */}
         <Route element={<Onboarding />} path="/onboarding" />
+        <Route element={<Onboarding />} path="/onboarding/*" />
         {/* Dashboard routes - to be implemented in Epic 4 */}
         <Route element={<div>Dashboard - Coming Soon</div>} path="/dashboard" />
         {/* Settings routes */}

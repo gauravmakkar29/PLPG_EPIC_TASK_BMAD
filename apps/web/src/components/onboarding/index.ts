@@ -7,3 +7,5 @@
  */
 
 export { Step1CurrentRole } from './Step1CurrentRole';
+export { OnboardingWelcome } from './OnboardingWelcome';
+export type { OnboardingWelcomeProps } from './OnboardingWelcome';
